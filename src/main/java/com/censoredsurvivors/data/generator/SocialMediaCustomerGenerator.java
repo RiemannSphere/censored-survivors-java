@@ -8,6 +8,21 @@ import java.util.Random;
 import com.censoredsurvivors.util.ProjectConfig;
 
 public class SocialMediaCustomerGenerator {
+    /**
+     * Generates a table of customers.
+     * 
+     * The timeline for generation looks like this:
+     * |--extended period--|--observation period--|--extended period--|
+     * 
+     * Left censored customers are being generated withing the first extended period and the observation period.
+     * Right censored customers are being generated withing the observation period and the second extended period.
+     * 
+     * @param numberOfCustomers The number of customers to generate.
+     * @param percentOfLeftCensoredCustomers The percentage of customers that started before the observation period.
+     * @param percentOfRightCensoredCustomers The percentage of customers that will end after the observation period.
+     * @param observationPeriodInYears The number of years to observe the customers.
+     * @return A table of customers.
+     */
     protected Table generateCustomers(
         int numberOfCustomers, 
         double percentOfLeftCensoredCustomers, 
@@ -41,9 +56,9 @@ public class SocialMediaCustomerGenerator {
         for (int i = 0; i < numberOfCustomers; i++) {
             customerIds[i] = String.valueOf(i);
             customerNames[i] = "Customer " + i;
-            industries[i] = INDUSTRY_VALUES[i % INDUSTRY_VALUES.length];
-            countries[i] = COUNTRY_VALUES[i % COUNTRY_VALUES.length];
-            plans[i] = PLAN_VALUES[i % PLAN_VALUES.length];
+            industries[i] = ProjectConfig.INDUSTRY_VALUES[i % ProjectConfig.INDUSTRY_VALUES.length];
+            countries[i] = ProjectConfig.COUNTRY_VALUES[i % ProjectConfig.COUNTRY_VALUES.length];
+            plans[i] = ProjectConfig.PLAN_VALUES[i % ProjectConfig.PLAN_VALUES.length];
 
             if (i < leftCensoredCount) {
                 // Left censored: start before observation, end within observation period
@@ -69,13 +84,13 @@ public class SocialMediaCustomerGenerator {
         }
 
         return Table.create("Customers",
-            StringColumn.create(CUSTOMER_ID_COLUMN, customerIds),
-            StringColumn.create(CUSTOMER_NAME_COLUMN, customerNames),
-            StringColumn.create("industry", industries),
-            StringColumn.create("country", countries),
-            DateColumn.create("contractStartDate", contractStartDates),
-            DateColumn.create("contractEndDate", contractEndDates),
-            StringColumn.create("plan", plans)
+            StringColumn.create(ProjectConfig.CUSTOMER_ID_COLUMN, customerIds),
+            StringColumn.create(ProjectConfig.CUSTOMER_NAME_COLUMN, customerNames),
+            StringColumn.create(ProjectConfig.INDUSTRY_COLUMN, industries),
+            StringColumn.create(ProjectConfig.COUNTRY_COLUMN, countries),
+            DateColumn.create(ProjectConfig.CONTRACT_START_DATE_COLUMN, contractStartDates),
+            DateColumn.create(ProjectConfig.CONTRACT_END_DATE_COLUMN, contractEndDates),
+            StringColumn.create(ProjectConfig.PLAN_COLUMN, plans)
         );
     }
 }
