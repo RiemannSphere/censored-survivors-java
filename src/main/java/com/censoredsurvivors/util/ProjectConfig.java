@@ -17,6 +17,9 @@ public class ProjectConfig {
     public static final String INDUSTRY_COLUMN = "industry";
     public static final String COUNTRY_COLUMN = "country";
     public static final String CHANNEL_COLUMN = "channel";
+    public static final String YEAR_COLUMN = "year";
+    public static final String WEEK_COLUMN = "week";
+    public static final String POST_COUNT_COLUMN = "postCount";
     public static final String PLAN_COLUMN = "plan";
 
     // Make sure the arrays have different prime number of elements to avoid patterns
