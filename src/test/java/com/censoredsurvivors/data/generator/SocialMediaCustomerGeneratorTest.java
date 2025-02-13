@@ -13,7 +13,6 @@ import tech.tablesaw.api.Table;
 import java.time.LocalDate;
 
 public class SocialMediaCustomerGeneratorTest {
-    private static final double EPSILON = 0.01;
     private SocialMediaCustomerGenerator generator;
 
     @BeforeEach
@@ -25,22 +24,22 @@ public class SocialMediaCustomerGeneratorTest {
     @CsvSource({
         // Basic coverage of numberOfCustomers
         "'Basic small sample', 57, 0.0, 0.1, 1",
-        "'Basic medium sample', 101, 0.1, 0.5, 5",
+        "'Basic medium sample', 100, 0.1, 0.5, 5",
         "'Basic large sample', 10007, 0.5, 0.0, 15",
         
         // Coverage of left censoring
         "'Left censoring small', 57, 0.1, 0.8, 5",
-        "'Left censoring medium', 101, 0.5, 0.5, 15",
+        "'Left censoring medium', 100, 0.5, 0.5, 15",
         "'Left censoring large', 10007, 0.8, 0.1, 1",
         
         // Coverage of right censoring
         "'Right censoring small', 57, 0.1, 0.1, 15",
-        "'Right censoring medium', 101, 0.0, 0.5, 1",
+        "'Right censoring medium', 100, 0.0, 0.5, 1",
         "'Right censoring large', 10007, 0.1, 0.8, 5",
         
         // Edge cases
         "'Edge case full right', 57, 0.0, 1.0, 1",
-        "'Edge case full left', 101, 1.0, 0.0, 5",
+        "'Edge case full left', 100, 1.0, 0.0, 5",
         "'Edge case balanced', 10007, 0.5, 0.5, 15",
     })
     void shouldGenerateCustomers(
@@ -60,17 +59,17 @@ public class SocialMediaCustomerGeneratorTest {
         DateColumn contractStartDateColumn = customers.dateColumn(ProjectConfig.CONTRACT_START_DATE_COLUMN);
         DateColumn contractEndDateColumn = customers.dateColumn(ProjectConfig.CONTRACT_END_DATE_COLUMN);
         long leftCensored = customers.where(
-            contractStartDateColumn.isBefore(ProjectConfig.OBSERVATION_START_DATE)
+            contractStartDateColumn.isOnOrBefore(ProjectConfig.OBSERVATION_START_DATE)
         ).rowCount();
         long rightCensored = customers.where(
-            contractEndDateColumn.isAfter(ProjectConfig.OBSERVATION_START_DATE.plusYears(observationPeriodInYears))
+            contractEndDateColumn.isOnOrAfter(ProjectConfig.OBSERVATION_START_DATE.plusYears(observationPeriodInYears))
         ).rowCount();
 
         Assertions.assertEquals(numberOfCustomers, customers.rowCount(), 
             String.format("[%s] Number of customers", scenario));
-        Assertions.assertEquals(Math.floor(numberOfCustomers * percentOfLeftCensoredCustomers), leftCensored, EPSILON * numberOfCustomers, 
+        Assertions.assertEquals((int)(numberOfCustomers * percentOfLeftCensoredCustomers), leftCensored, 
             String.format("[%s] Number of left censored customers", scenario));
-        Assertions.assertEquals(Math.floor(numberOfCustomers * percentOfRightCensoredCustomers), rightCensored, EPSILON * numberOfCustomers, 
+        Assertions.assertEquals((int)(numberOfCustomers * percentOfRightCensoredCustomers), rightCensored, 
             String.format("[%s] Number of right censored customers", scenario));
         Assertions.assertEquals(customers.stringColumn(ProjectConfig.CUSTOMER_ID_COLUMN).unique().size(), customers.rowCount(), 
             String.format("[%s] Customer IDs are unique", scenario));

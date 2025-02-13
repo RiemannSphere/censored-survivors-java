@@ -45,8 +45,8 @@ public class SocialMediaCustomerGenerator {
         LocalDate extendedStartDate = observationStartDate.minusYears(ProjectConfig.EXTENDED_PERIOD_YEARS);
         LocalDate extendedEndDate = observationEndDate.plusYears(ProjectConfig.EXTENDED_PERIOD_YEARS);
         
-        int leftCensoredCount = (int) (numberOfCustomers * percentOfLeftCensoredCustomers);
-        int rightCensoredCount = (int) (numberOfCustomers * percentOfRightCensoredCustomers);
+        int leftCensoredCount = (int)(numberOfCustomers * percentOfLeftCensoredCustomers);
+        int rightCensoredCount = (int)(numberOfCustomers * percentOfRightCensoredCustomers);
 
         Random random = ProjectConfig.RANDOM;
 
@@ -72,21 +72,21 @@ public class SocialMediaCustomerGenerator {
 
             if (i < leftCensoredCount) {
                 // Left censored: start before observation, end within observation period
-                long randomStart = extStartEpochDay + random.nextLong(observationStartDate.toEpochDay() - extStartEpochDay);
+                long randomStart = extStartEpochDay + random.nextLong(observationStartDate.toEpochDay() - extStartEpochDay - 1);
                 long randomEnd = startEpochDay + random.nextLong(endEpochDay - startEpochDay);
                 contractStartDates[i] = LocalDate.ofEpochDay(randomStart);
                 contractEndDates[i] = LocalDate.ofEpochDay(randomEnd);
             } 
             else if (i < leftCensoredCount + rightCensoredCount) {
                 // Right censored: start within observation, end after observation
-                long randomStart = startEpochDay + random.nextLong(endEpochDay - startEpochDay);
+                long randomStart = startEpochDay + 1 + random.nextLong(endEpochDay - startEpochDay - 1);
                 long randomEnd = endEpochDay + random.nextLong(extEndEpochDay - endEpochDay);
                 contractStartDates[i] = LocalDate.ofEpochDay(randomStart);
                 contractEndDates[i] = LocalDate.ofEpochDay(randomEnd);
             } 
             else {
                 // Normal: both dates within observation period
-                long randomStart = startEpochDay + random.nextLong(endEpochDay - startEpochDay);
+                long randomStart = startEpochDay + 1 + random.nextLong(endEpochDay - startEpochDay - 1);
                 long randomEnd = randomStart + random.nextLong(endEpochDay - randomStart);
                 contractStartDates[i] = LocalDate.ofEpochDay(randomStart);
                 contractEndDates[i] = LocalDate.ofEpochDay(randomEnd);
