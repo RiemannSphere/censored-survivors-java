@@ -1,14 +1,8 @@
 package com.censoredsurvivors.data.generator;
 
-import com.censoredsurvivors.data.model.SocialMediaPostChurnDataSet;
-
 import tech.tablesaw.api.IntColumn;
 import tech.tablesaw.api.StringColumn;
-import tech.tablesaw.api.DateColumn;
 import tech.tablesaw.api.Table;
-import tech.tablesaw.api.Row;
-import java.time.LocalDate;
-import java.util.Random;
 import com.censoredsurvivors.util.ProjectConfig;
 
 public class SocialMediaPostChurnGenerator {
@@ -39,18 +33,5 @@ public class SocialMediaPostChurnGenerator {
         );
 
         return df;
-    }
-
-    public SocialMediaPostChurnDataSet generate() {
-        Table customers = generateCustomers(numberOfCustomers);
-        Table platformPosts = generatePlatformPosts(customers);
-        Table nativePosts = generateNativePosts(customers);
-
-        SocialMediaPostChurnDataSet dataSet = new SocialMediaPostChurnDataSet();
-        dataSet.setCustomers(customers);
-        dataSet.setPlatformPosts(platformPosts);
-        dataSet.setNativePosts(nativePosts);
-
-        return dataSet;
     }
 }

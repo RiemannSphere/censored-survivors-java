@@ -29,6 +29,16 @@ public class SocialMediaCustomerGenerator {
         double percentOfRightCensoredCustomers,
         int observationPeriodInYears
     ) {
+        if (percentOfLeftCensoredCustomers + percentOfRightCensoredCustomers > 1) {
+            throw new IllegalArgumentException("The sum of percentOfLeftCensoredCustomers and percentOfRightCensoredCustomers cannot be greater than 1.");
+        }
+        if (percentOfLeftCensoredCustomers < 0 || percentOfRightCensoredCustomers < 0) {
+            throw new IllegalArgumentException("The percent of left censored customers and the percent of right censored customers cannot be negative.");
+        }
+        if (observationPeriodInYears <= 0) {
+            throw new IllegalArgumentException("The observation period has to be positive.");
+        }
+        
         LocalDate observationStartDate = ProjectConfig.OBSERVATION_START_DATE;
         LocalDate observationEndDate = observationStartDate.plusYears(observationPeriodInYears);
         
