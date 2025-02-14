@@ -27,7 +27,7 @@ public enum SocialMediaChannel {
 
     static {
         double sum = Arrays.stream(SocialMediaChannel.getAllPopularities()).sum();
-        if (sum <= 1.0) {
+        if (Math.abs(sum - 1.0) > 1e-10) {  // Using epsilon comparison for floating point
             throw new IllegalArgumentException("Popularity values must sum to 1");
         }
 
@@ -70,8 +70,11 @@ public enum SocialMediaChannel {
 
     public static List<SocialMediaChannel> getRandomChannelsSubset() {
         return Arrays.stream(SocialMediaChannel.values())
-                .filter(channel -> ProjectConfig.RANDOM.nextDouble() < channel.getPopularity()) // Select based on popularity
-                .collect(Collectors.toList());
+                .filter(channel -> ProjectConfig.RANDOM.nextDouble() < channel.getPopularity())
+                .collect(Collectors.collectingAndThen(
+                    Collectors.toList(),
+                    list -> list.isEmpty() ? Arrays.asList(FACEBOOK) : list
+                ));
     }
 
     public static SocialMediaChannel getByDisplayName(String displayName) {
