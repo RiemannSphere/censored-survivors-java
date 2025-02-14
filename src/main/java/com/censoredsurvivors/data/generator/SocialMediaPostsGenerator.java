@@ -8,13 +8,12 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.IsoFields;
 import java.util.List;
-import org.apache.commons.math3.distribution.BinomialDistribution;
-import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.UniformRealDistribution;
 
 import com.censoredsurvivors.data.model.SocialMediaParam;
-import com.censoredsurvivors.data.model.SocialMediaPostRule;
 import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
+import com.censoredsurvivors.data.model.SocialMediaPostRule;
+import com.censoredsurvivors.data.statistics.PostCountDistribution;
 import com.censoredsurvivors.util.ProjectConfig;
 import com.censoredsurvivors.data.model.SocialMediaChannel;
 
@@ -25,34 +24,6 @@ public class SocialMediaPostsGenerator {
     private final UniformRealDistribution meanDistribution = new UniformRealDistribution(1, 500);
 
     private record Post(String customerId, String customerName, SocialMediaChannel channel, int year, int week, int postCount) {}
-
-    private class PostCountDistribution {
-        private BinomialDistribution bernoulliDistribution;
-        private LogNormalDistribution logNormalDistribution;
-        
-        /**
-         * Generates a distribution for the number of posts for a given week.
-         * 
-         * @param mean Mean number of posts per week.
-         * @param stdDev Standard deviation of the number of posts per week.
-         * @param frequency Frequency of posting = 1 / number of weeks between posts.
-         */ 
-        public PostCountDistribution(SocialMediaPostDistributionParams params) {
-            // Binomial distribution with n = 1 is equivalent to a Bernoulli distribution.
-            this.bernoulliDistribution = new BinomialDistribution(1, params.frequency());
-            // Convert normal parameters to log-normal parameters to stay close to the normal distribution values.
-            double logNormalMean = Math.log(params.mean() * params.mean() / Math.sqrt(params.stdDev() * params.stdDev() + params.mean() * params.mean()));
-            double logNormalStdDev = Math.sqrt(Math.log(1 + (params.stdDev() * params.stdDev()) / (params.mean() * params.mean())));
-            this.logNormalDistribution = new LogNormalDistribution(logNormalMean, logNormalStdDev);
-        }
-
-        public int sample() {
-            return (int) Math.round(
-                this.bernoulliDistribution.sample() * 
-                this.logNormalDistribution.sample()
-            );
-        }
-    }
 
     private final Table customers;
 
