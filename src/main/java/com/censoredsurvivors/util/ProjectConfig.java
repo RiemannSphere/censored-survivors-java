@@ -3,6 +3,11 @@ package com.censoredsurvivors.util;
 import java.util.Random;
 import java.time.LocalDate;
 
+import com.censoredsurvivors.data.model.SocialMediaIndustry;
+import com.censoredsurvivors.data.model.SocialMediaCountry;
+import com.censoredsurvivors.data.model.SocialMediaChannel;
+import com.censoredsurvivors.data.model.SocialMediaPlan;
+
 public class ProjectConfig {
     public static final long RANDOM_SEED = 42L;
     public static final Random RANDOM = new Random(RANDOM_SEED);
@@ -22,39 +27,9 @@ public class ProjectConfig {
     public static final String POST_COUNT_COLUMN = "postCount";
     public static final String PLAN_COLUMN = "plan";
 
-    // Make sure the arrays have different prime number of elements to avoid patterns
-    public static final String[] INDUSTRY_VALUES = {
-        "Technology",
-        "Finance",
-        "Healthcare",
-        "Manufacturing",
-        "Retail",
-        "Energy",
-        "Transportation",
-        "Telecom",
-        "Entertainment",
-        "Education",
-        "Social Media"
-    };
-    public static final String[] COUNTRY_VALUES = {
-        "United States",
-        "United Kingdom",
-        "Germany",
-        "France",
-        "Italy",
-        "Greece",
-        "Turkey",
-    };
-    public static final String[] CHANNEL_VALUES = {
-        "Facebook",
-        "Twitter",
-        "Instagram",
-        "LinkedIn",
-        "YouTube",
-    };
-    public static final String[] PLAN_VALUES = {
-        "Basic",
-        "Pro",
-        "Enterprise"
-    };
+    // Make sure the params have different prime number of elements to avoid patterns
+    public static final String[] INDUSTRY_VALUES = SocialMediaIndustry.getAllDisplayNames();
+    public static final String[] COUNTRY_VALUES = SocialMediaCountry.getAllDisplayNames();
+    public static final String[] CHANNEL_VALUES = SocialMediaChannel.getAllDisplayNames();
+    public static final String[] PLAN_VALUES = SocialMediaPlan.getAllDisplayNames();
 }
