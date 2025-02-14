@@ -60,5 +60,14 @@ public class SocialMediaPostsGeneratorTest {
         // Some customers post on more than one channel, therefore the number of posts can be higher than the minimum expected.
         Assertions.assertTrue(minimumExpectedPosts <= posts.rowCount(), 
             String.format("Expected at least %d posts but found %d posts", minimumExpectedPosts, posts.rowCount()));
+
+        // double averageFacebookPosts = posts.where(
+        //     posts.stringColumn(ProjectConfig.CHANNEL_COLUMN).equalsIgnoreCase(SocialMediaChannel.FACEBOOK.name())
+        // ).stream()
+        //     .mapToInt(row -> row.getInt(ProjectConfig.POST_COUNT_COLUMN))
+        //     .average()
+        //     .orElse(0);
+
+        // Assertions.assertEquals(100, averageFacebookPosts, 10,"Average number of Facebook posts.");
     }
 }
