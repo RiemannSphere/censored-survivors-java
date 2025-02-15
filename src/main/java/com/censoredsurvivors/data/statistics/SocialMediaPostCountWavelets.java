@@ -3,10 +3,11 @@ package com.censoredsurvivors.data.statistics;
 import com.censoredsurvivors.util.ProjectConfig;
 
 import smile.wavelet.HaarWavelet;
+import smile.wavelet.Wavelet;
 import tech.tablesaw.api.Table;
 
 public class SocialMediaPostCountWavelets {
-    private final HaarWavelet wavelet = new HaarWavelet();
+    private final Wavelet wavelet = new HaarWavelet();
 
     public double[] transform(Table posts) {
         // Get original post counts
@@ -47,8 +48,8 @@ public class SocialMediaPostCountWavelets {
         }
 
         // Calculate the start and end indices for the desired level
-        int levelStart = n >>> (numLevels - level);
-        int levelEnd = n >>> (numLevels - level - 1);
+        int levelStart = n / (int) Math.pow(2, numLevels - level);
+        int levelEnd = n / (int) Math.pow(2, numLevels - level - 1);
 
         // Zero out all coefficients except those in the desired level
         for (int i = 0; i < n; i++) {

@@ -27,7 +27,6 @@ import org.knowm.xchart.XYChart;
 import org.knowm.xchart.XYChartBuilder;
 import org.knowm.xchart.XYSeries.XYSeriesRenderStyle;
 import org.knowm.xchart.style.Styler.LegendPosition;
-import org.knowm.xchart.SwingWrapper;
 
 @TestInstance(Lifecycle.PER_CLASS)
 public class SocialMediaPostCountWaveletsTest {
@@ -63,11 +62,13 @@ public class SocialMediaPostCountWaveletsTest {
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 4, 5})
     public void testTransformAndPlotFrequency(int frequencyLevel) throws IOException {
-        // Group by week and sum post counts
+        // Group by week and sum post counts, then filter out empty weeks
+        String summaryColumnName = "Sum [" + ProjectConfig.POST_COUNT_COLUMN + "]";
         Table weeklyPosts = posts.summarize(
             ProjectConfig.POST_COUNT_COLUMN, 
             tech.tablesaw.aggregate.AggregateFunctions.sum
-        ).by(ProjectConfig.YEAR_COLUMN, ProjectConfig.WEEK_COLUMN);
+        ).by(ProjectConfig.YEAR_COLUMN, ProjectConfig.WEEK_COLUMN)
+        .dropWhere(t -> t.doubleColumn(summaryColumnName).isEqualTo(0));
 
         // Create two separate charts
         XYChart originalChart = new XYChartBuilder()
@@ -91,7 +92,6 @@ public class SocialMediaPostCountWaveletsTest {
             .mapToDouble(i -> i)
             .toArray();
         
-        String summaryColumnName = "Sum [" + ProjectConfig.POST_COUNT_COLUMN + "]";
         double[] originalPostCounts = weeklyPosts.doubleColumn(summaryColumnName)
             .asDoubleArray();
 
