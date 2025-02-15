@@ -23,7 +23,7 @@ public class SocialMediaCustomerGenerator {
      * @param observationPeriodInYears The number of years to observe the customers.
      * @return A table of customers.
      */
-    protected Table generateCustomers(
+    public Table generateCustomers(
         int numberOfCustomers, 
         double percentOfLeftCensoredCustomers, 
         double percentOfRightCensoredCustomers,

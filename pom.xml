@@ -69,6 +69,12 @@
       <version>1.18.30</version>
       <scope>provided</scope>
     </dependency>
+    <!-- Smile -->
+    <dependency>
+      <groupId>com.github.haifengl</groupId>
+      <artifactId>smile-core</artifactId>
+      <version>4.2.0</version>
+    </dependency>
   </dependencies>
 
   <build>

@@ -1,0 +1,14 @@
+## Tools
+
+1. For data transformations we use Tablesaw: https://jtablesaw.github.io/tablesaw/gettingstarted.html
+2. For maths and statistics we use Apache Commons: https://commons.apache.org/proper/commons-math/javadocs/api-3.6.1/index.html
+3. For plotting we use XChart: https://knowm.org/open-source/xchart/xchart-example-code/
+4. For Wavelet Transforms we use Smile: https://haifengl.github.io/wavelet.html
+
+## Code 
+
+1. Use Java 21 features.
+2. Use Java Streams instead of loops and indeces.
+3. Keep the code null-safe. Use Optionals when possible.
+4. Repeating code is okay, it doesn't have to be DRY.
+5. Much more important is simplicity and KISS.

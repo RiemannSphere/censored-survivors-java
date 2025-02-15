@@ -11,6 +11,9 @@ public class SocialMediaPostCountDistribution {
     
     /**
      * Generates a distribution for the number of posts for a given week.
+     * Uses two distributions: 
+     * - Normal distribution to generate the number of posts for a given week,
+     * - Bernoulli distribution to choose whether to post or not for a given week.
      * 
      * @param mean Mean number of posts per week.
      * @param stdDev Standard deviation of the number of posts per week.
