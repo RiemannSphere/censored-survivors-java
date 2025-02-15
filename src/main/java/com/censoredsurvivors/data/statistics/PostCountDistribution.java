@@ -1,13 +1,13 @@
 package com.censoredsurvivors.data.statistics;
 
 import org.apache.commons.math3.distribution.BinomialDistribution;
-import org.apache.commons.math3.distribution.LogNormalDistribution;
+import org.apache.commons.math3.distribution.NormalDistribution;
 
 import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
 
 public class PostCountDistribution {
     private BinomialDistribution bernoulliDistribution;
-    private LogNormalDistribution logNormalDistribution;
+    private NormalDistribution normalDistribution;
     
     /**
      * Generates a distribution for the number of posts for a given week.
@@ -19,20 +19,13 @@ public class PostCountDistribution {
     public PostCountDistribution(SocialMediaPostDistributionParams params) {
         // Binomial distribution with n = 1 is equivalent to a Bernoulli distribution.
         this.bernoulliDistribution = new BinomialDistribution(1, params.frequency());
-        double mu = params.mean();
-        double sigma = params.stdDev();
-
-        // Convert normal parameters to log-normal parameters to stay close to the normal distribution values.
-        double logNormalMean = Math.log(mu * mu / Math.sqrt(mu * mu + sigma * sigma));
-        double logNormalStdDev = Math.sqrt(Math.log(1 + (sigma * sigma) / (mu * mu)));
-
-        this.logNormalDistribution = new LogNormalDistribution(logNormalMean, logNormalStdDev);
+        this.normalDistribution = new NormalDistribution(params.mean(), params.stdDev());
     }
 
     public int sample() {
         return (int) Math.round(
             this.bernoulliDistribution.sample() * 
-            this.logNormalDistribution.sample()
+            Math.max(0, this.normalDistribution.sample())
         );
     }
 }

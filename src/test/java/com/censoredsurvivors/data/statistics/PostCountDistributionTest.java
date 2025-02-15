@@ -49,8 +49,8 @@ public class PostCountDistributionTest {
         // 3. Compare different means
         compareDistributions(
             "Mean Comparison",
+            new SocialMediaPostDistributionParams(250, 10, 1.0),
             new SocialMediaPostDistributionParams(100, 10, 1.0),
-            new SocialMediaPostDistributionParams(1000, 10, 1.0),
             "mean-comparison"
         );
     }
@@ -71,26 +71,22 @@ public class PostCountDistributionTest {
         List<String> labels = new ArrayList<>();
 
         // Sample from first distribution
-        List<Double> data1 = new ArrayList<>();
-        for (int i = 0; i < NUM_SAMPLES; i++) {
-            double postCount = dist1.sample();
-            if (postCount > 0) {
-                data1.add(postCount);
-            }
-        }
+        List<Double> data1 = java.util.stream.Stream.generate(dist1::sample)
+            .limit(NUM_SAMPLES)
+            .filter(postCount -> postCount > 0)
+            .map(Double::valueOf)
+            .collect(java.util.stream.Collectors.toList());
         allData.add(data1);
         labels.add(String.format(Locale.US,
             "Distribution 1 (μ=%d, σ=%d, f=%.2f) [n=%d]",
             (int)params1.mean(), (int)params1.stdDev(), params1.frequency(), data1.size()));
 
         // Sample from second distribution
-        List<Double> data2 = new ArrayList<>();
-        for (int i = 0; i < NUM_SAMPLES; i++) {
-            double postCount = dist2.sample();
-            if (postCount > 0) {
-                data2.add(postCount);
-            }
-        }
+        List<Double> data2 = java.util.stream.Stream.generate(dist2::sample)
+            .limit(NUM_SAMPLES)
+            .filter(postCount -> postCount > 0)
+            .map(Double::valueOf)
+            .collect(java.util.stream.Collectors.toList());
         allData.add(data2);
         labels.add(String.format(Locale.US,
             "Distribution 2 (μ=%d, σ=%d, f=%.2f) [n=%d]",
