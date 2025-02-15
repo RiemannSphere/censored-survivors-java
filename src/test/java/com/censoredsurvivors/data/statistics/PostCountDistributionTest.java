@@ -99,68 +99,47 @@ public class PostCountDistributionTest {
             histogram2.getyAxisData().stream().mapToDouble(d -> d).max().orElse(0)
         );
 
-        // Create two separate charts
-        CategoryChart chart1 = new CategoryChartBuilder()
+        // Create single chart for both distributions
+        CategoryChart chart = new CategoryChartBuilder()
             .width(800)
-            .height(300)  // Half the original height
+            .height(600)  // Full height since we're using one chart
             .title(title + " - Post Count Distributions")
             .xAxisTitle("Post Count")
             .yAxisTitle("Frequency")
             .build();
 
-        CategoryChart chart2 = new CategoryChartBuilder()
-            .width(800)
-            .height(300)  // Half the original height
-            .title("")  // Empty title for second chart since we have a combined title
-            .xAxisTitle("Post Count")
-            .yAxisTitle("Frequency")
-            .build();
-
-        // Customize Charts
-        for (CategoryChart chart : List.of(chart1, chart2)) {
-            chart.getStyler().setLegendPosition(LegendPosition.InsideNE);
-            chart.getStyler().setAvailableSpaceFill(0.99);
-            chart.getStyler().setXAxisLabelRotation(-45);
-            chart.getStyler().setDecimalPattern("#");
-            chart.getStyler().setYAxisMin(0.0);
-            chart.getStyler().setYAxisMax(maxY);
-        }
+        // Customize Chart
+        chart.getStyler().setLegendPosition(LegendPosition.InsideNE);
+        chart.getStyler().setAvailableSpaceFill(0.99);
+        chart.getStyler().setOverlapped(true);
+        chart.getStyler().setXAxisLabelRotation(-45);
+        chart.getStyler().setDecimalPattern("#");
+        chart.getStyler().setYAxisMin(0.0);
+        chart.getStyler().setYAxisMax(maxY);
 
         System.out.println("Histogram 1: " + histogram1.getxAxisData().stream().mapToInt(x -> x.intValue()).average());
         System.out.println("Histogram 2: " + histogram2.getxAxisData().stream().mapToInt(x -> x.intValue()).average());
 
-        // Add histogram series to separate charts
-        chart1.addSeries(
+        // Add both histogram series to the same chart
+        chart.addSeries(
             String.format(Locale.US, "μ=%d, σ=%d, f=%.2f [n=%d]",
                 (int)params1.mean(), (int)params1.stdDev(), params1.frequency(), data1.size()),
             histogram1.getxAxisData(),
             histogram1.getyAxisData()
         ).setFillColor(COLORS.get(0));
 
-        chart2.addSeries(
+        chart.addSeries(
             String.format(Locale.US, "μ=%d, σ=%d, f=%.2f [n=%d]",
                 (int)params2.mean(), (int)params2.stdDev(), params2.frequency(), data2.size()),
             histogram2.getxAxisData(),
             histogram2.getyAxisData()
         ).setFillColor(COLORS.get(1));
 
-        // Create a combined vertical image
-        java.awt.image.BufferedImage chart1Image = BitmapEncoder.getBufferedImage(chart1);
-        java.awt.image.BufferedImage chart2Image = BitmapEncoder.getBufferedImage(chart2);
-        
-        java.awt.image.BufferedImage combined = new java.awt.image.BufferedImage(
-            800, 600, java.awt.image.BufferedImage.TYPE_INT_ARGB);
-        
-        java.awt.Graphics2D g2d = combined.createGraphics();
-        g2d.drawImage(chart1Image, 0, 0, null);
-        g2d.drawImage(chart2Image, 0, 300, null);
-        g2d.dispose();
-
-        // Save the combined image
-        javax.imageio.ImageIO.write(
-            combined, 
-            "PNG", 
-            new File("target/test-output/" + outputFileName + ".png")
+        // Save the single chart
+        BitmapEncoder.saveBitmap(
+            chart, 
+            "target/test-output/" + outputFileName + ".png",
+            BitmapEncoder.BitmapFormat.PNG
         );
     }
 }
