@@ -82,8 +82,8 @@ public class SocialMediaPostsGenerator {
                     .orElseGet(() -> {
                         double randomMean = Math.max(1, meanDistribution.sample());
                         double randomStdDev = Math.max(1, randomMean * ProjectConfig.RANDOM.nextDouble());
-                        double randomFrequency = Math.max(0.1, ProjectConfig.RANDOM.nextDouble());
-
+                        double randomFrequency = Math.max(0.5, ProjectConfig.RANDOM.nextDouble()); // minimum frequency is 0.5
+ 
                         return new SocialMediaPostCountDistribution(
                             new SocialMediaPostDistributionParams(randomMean, randomStdDev, randomFrequency));
                     });
