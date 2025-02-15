@@ -17,50 +17,90 @@ import java.util.List;
 import java.util.Locale;
 
 public class PostCountDistributionTest {
+    private static final int NUM_SAMPLES = 100_000;
+    private static final int NUM_HISTOGRAM_BINS = 48;
+    private static final List<java.awt.Color> COLORS = List.of(
+        new java.awt.Color(220, 53, 69, 128),     // Red
+        new java.awt.Color(0, 116, 217, 128)      // Blue
+    );
+
     @Test
     public void testSample() throws IOException {
-        double mean = 100;
-        double[] stdDevs = {10, 25};
-        double[] frequencies = {0.25, 0.1};
+        // Create output directory if it doesn't exist
+        File outputDir = new File("target/test-output");
+        outputDir.mkdirs();
 
-        // Create distributions and generate data
-        List<List<Double>> allData = new ArrayList<>();
-        List<String> labels = new ArrayList<>();
-        List<java.awt.Color> colors = List.of(
-            new java.awt.Color(0, 116, 217, 128),    // Blue
-            new java.awt.Color(220, 53, 69, 128),    // Red
-            new java.awt.Color(40, 167, 69, 128),    // Green
-            new java.awt.Color(255, 193, 7, 128)     // Yellow
+        // 1. Compare different frequencies
+        compareDistributions(
+            "Frequency Comparison",
+            new SocialMediaPostDistributionParams(100, 10, 0.25),
+            new SocialMediaPostDistributionParams(100, 10, 1.0),
+            "frequency-comparison"
         );
 
-        int numSamples = 100_000;
-        for (double stdDev : stdDevs) {
-            for (double frequency : frequencies) {
-                PostCountDistribution distribution = new PostCountDistribution(
-                    new SocialMediaPostDistributionParams(mean, stdDev, frequency));
-                
-                List<Double> data = new ArrayList<>();
-                for (int i = 0; i < numSamples; i++) {
-                    double postCount = distribution.sample();
-                    if (postCount > 0) {  // Filter out zero counts
-                        data.add(postCount);
-                    }
-                }
-                allData.add(data);
-                
-                // Create label with parameters and sample size
-                String label = String.format(Locale.US, 
-                    "Post Count Distribution (μ=%d, σ=%d, f=%.2f) [n=%d]",
-                    (int)mean, (int)stdDev, frequency, data.size());
-                labels.add(label);
+        // 2. Compare different standard deviations
+        compareDistributions(
+            "Standard Deviation Comparison",
+            new SocialMediaPostDistributionParams(100, 10, 1.0),
+            new SocialMediaPostDistributionParams(100, 25, 1.0),
+            "stddev-comparison"
+        );
+
+        // 3. Compare different means
+        compareDistributions(
+            "Mean Comparison",
+            new SocialMediaPostDistributionParams(100, 10, 1.0),
+            new SocialMediaPostDistributionParams(1000, 10, 1.0),
+            "mean-comparison"
+        );
+    }
+
+    private void compareDistributions(
+        String title,
+        SocialMediaPostDistributionParams params1,
+        SocialMediaPostDistributionParams params2,
+        String outputFileName
+    ) throws IOException {
+        
+        // Create distributions
+        PostCountDistribution dist1 = new PostCountDistribution(params1);
+        PostCountDistribution dist2 = new PostCountDistribution(params2);
+
+        // Generate data
+        List<List<Double>> allData = new ArrayList<>();
+        List<String> labels = new ArrayList<>();
+
+        // Sample from first distribution
+        List<Double> data1 = new ArrayList<>();
+        for (int i = 0; i < NUM_SAMPLES; i++) {
+            double postCount = dist1.sample();
+            if (postCount > 0) {
+                data1.add(postCount);
             }
         }
+        allData.add(data1);
+        labels.add(String.format(Locale.US,
+            "Distribution 1 (μ=%d, σ=%d, f=%.2f) [n=%d]",
+            (int)params1.mean(), (int)params1.stdDev(), params1.frequency(), data1.size()));
+
+        // Sample from second distribution
+        List<Double> data2 = new ArrayList<>();
+        for (int i = 0; i < NUM_SAMPLES; i++) {
+            double postCount = dist2.sample();
+            if (postCount > 0) {
+                data2.add(postCount);
+            }
+        }
+        allData.add(data2);
+        labels.add(String.format(Locale.US,
+            "Distribution 2 (μ=%d, σ=%d, f=%.2f) [n=%d]",
+            (int)params2.mean(), (int)params2.stdDev(), params2.frequency(), data2.size()));
 
         // Create Chart
         CategoryChart chart = new CategoryChartBuilder()
             .width(800)
             .height(600)
-            .title("Post Count Distribution Comparison")
+            .title(title)
             .xAxisTitle("Post Count")
             .yAxisTitle("Frequency")
             .build();
@@ -72,18 +112,14 @@ public class PostCountDistributionTest {
         chart.getStyler().setXAxisLabelRotation(-45);
         chart.getStyler().setDecimalPattern("#");
 
-        // Add all histogram series
+        // Add histogram series
         for (int i = 0; i < allData.size(); i++) {
-            Histogram histogram = new Histogram(allData.get(i), 48);
+            Histogram histogram = new Histogram(allData.get(i), NUM_HISTOGRAM_BINS);
             chart.addSeries(labels.get(i), histogram.getxAxisData(), histogram.getyAxisData())
-                .setFillColor(colors.get(i));
+                .setFillColor(COLORS.get(i));
         }
 
-        // Create output directory if it doesn't exist
-        File outputDir = new File("target/test-output");
-        outputDir.mkdirs();
-
         // Save the chart
-        BitmapEncoder.saveBitmap(chart, "target/test-output/distribution-comparison", BitmapEncoder.BitmapFormat.PNG);
+        BitmapEncoder.saveBitmap(chart, "target/test-output/" + outputFileName, BitmapEncoder.BitmapFormat.PNG);
     }
 }
