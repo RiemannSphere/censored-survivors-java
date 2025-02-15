@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -55,6 +56,10 @@ public class SocialMediaPostCountWaveletsTest {
     public void testTransform() {
         SocialMediaPostCountWavelets wavelets = new SocialMediaPostCountWavelets();
         double[] coefficients = wavelets.transform(posts);
+
+        // Calculate the next power of 2 after posts.rowCount()
+        int nextPowerOfTwo = 1 << (32 - Integer.numberOfLeadingZeros(posts.rowCount() - 1));
+        Assertions.assertEquals(nextPowerOfTwo, coefficients.length);
 
         System.out.println(Arrays.toString(coefficients));
     }
