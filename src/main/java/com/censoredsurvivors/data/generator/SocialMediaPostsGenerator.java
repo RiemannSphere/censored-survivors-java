@@ -21,14 +21,21 @@ import com.censoredsurvivors.data.model.SocialMediaChannel;
  * Generates social media posts for a given set of customers.
  */
 public class SocialMediaPostsGenerator {
-    private final UniformRealDistribution meanDistribution = new UniformRealDistribution(1, 500);
+    private UniformRealDistribution meanDistribution = new UniformRealDistribution(1, 500);
 
     private record Post(String customerId, String customerName, SocialMediaChannel channel, int year, int week, int postCount) {}
 
-    private final Table customers;
+    private Table customers;
 
     public SocialMediaPostsGenerator(Table customers) {
         this.customers = customers;
+    }
+
+    /**
+     * @see #generatePosts(String, List, List)
+     */
+    public Table generatePosts(String tableName, List<SocialMediaPostRule> postRules) {
+        return generatePosts(tableName, postRules, SocialMediaChannel.getRandomChannelsSubset());
     }
 
     /**
@@ -41,9 +48,10 @@ public class SocialMediaPostsGenerator {
      * 
      * @param tableName Name of the table to save the generated posts to.
      * @param postRules Rules for generating the posts.
+     * @param channels Channels to generate the posts for.
      * @return Table with the generated posts.
      */
-    public Table generatePosts(String tableName, List<SocialMediaPostRule> postRules) {
+    public Table generatePosts(String tableName, List<SocialMediaPostRule> postRules, List<SocialMediaChannel> channels) {
         Table df = Table.create(tableName);
         df.addColumns(
             StringColumn.create(ProjectConfig.CUSTOMER_ID_COLUMN),
@@ -63,40 +71,41 @@ public class SocialMediaPostsGenerator {
             LocalDate startDate = customerRow.getDate(ProjectConfig.CONTRACT_START_DATE_COLUMN);
             LocalDate endDate = customerRow.getDate(ProjectConfig.CONTRACT_END_DATE_COLUMN);
 
-            List<SocialMediaChannel> channels = SocialMediaChannel.getRandomChannelsSubset();
+            System.out.println("[SocialMediaPostsGenerator] Generating posts for customer " + customerId + " with channels " + channels);
+            System.out.println("[SocialMediaPostsGenerator] Date range: " + startDate + " to " + endDate);
 
             return startDate.datesUntil(endDate)
-            .filter(date -> date.getDayOfWeek() == DayOfWeek.MONDAY) // samples are weeks
-            .flatMap(date -> channels.stream().map(channel -> {
-                SocialMediaPostCountDistribution firstMatchingDistribution = postRules.stream()
-                    .filter(rule -> {
-                        boolean matchesChannel = rule.param() == SocialMediaParam.CHANNEL && rule.paramValue().equals(channel.getDisplayName());
-                        boolean matchesIndustry = rule.param() == SocialMediaParam.INDUSTRY && rule.paramValue().equals(industry);
-                        boolean matchesCountry = rule.param() == SocialMediaParam.COUNTRY && rule.paramValue().equals(country);
-                        boolean matchesPlan = rule.param() == SocialMediaParam.PLAN && rule.paramValue().equals(plan);
+                .filter(date -> date.getDayOfWeek() == DayOfWeek.MONDAY) // samples are weeks
+                .flatMap(date -> channels.stream().map(channel -> {
+                    SocialMediaPostCountDistribution firstMatchingDistribution = postRules.stream()
+                        .filter(rule -> {
+                            boolean matchesChannel = rule.param() == SocialMediaParam.CHANNEL && rule.paramValue().equals(channel.getDisplayName());
+                            boolean matchesIndustry = rule.param() == SocialMediaParam.INDUSTRY && rule.paramValue().equals(industry);
+                            boolean matchesCountry = rule.param() == SocialMediaParam.COUNTRY && rule.paramValue().equals(country);
+                            boolean matchesPlan = rule.param() == SocialMediaParam.PLAN && rule.paramValue().equals(plan);
 
-                        return matchesChannel || matchesIndustry || matchesCountry || matchesPlan;
-                    })
-                    .map(rule -> new SocialMediaPostCountDistribution(rule.postCountDistributionParams()))
-                    .findFirst()
-                    .orElseGet(() -> {
-                        double randomMean = Math.max(1, meanDistribution.sample());
-                        double randomStdDev = Math.max(1, randomMean * ProjectConfig.RANDOM.nextDouble());
-                        double randomFrequency = Math.max(0.5, ProjectConfig.RANDOM.nextDouble()); // minimum frequency is 0.5
- 
-                        return new SocialMediaPostCountDistribution(
-                            new SocialMediaPostDistributionParams(randomMean, randomStdDev, randomFrequency));
-                    });
+                            return matchesChannel || matchesIndustry || matchesCountry || matchesPlan;
+                        })
+                        .map(rule -> new SocialMediaPostCountDistribution(rule.postCountDistributionParams()))
+                        .findFirst()
+                        .orElseGet(() -> {
+                            double randomMean = Math.max(1, meanDistribution.sample());
+                            double randomStdDev = Math.max(1, randomMean * ProjectConfig.RANDOM.nextDouble());
+                            double randomFrequency = Math.max(0.5, ProjectConfig.RANDOM.nextDouble()); // minimum frequency is 0.5
+    
+                            return new SocialMediaPostCountDistribution(
+                                new SocialMediaPostDistributionParams(randomMean, randomStdDev, randomFrequency));
+                        });
 
-                return new Post(
-                    customerId, 
-                    customerName, 
-                    channel, 
-                    date.getYear(), 
-                    date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR), 
-                    firstMatchingDistribution.sample()
-                );
-            }));
+                    return new Post(
+                        customerId, 
+                        customerName, 
+                        channel, 
+                        date.getYear(), 
+                        date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR), 
+                        firstMatchingDistribution.sample()
+                    );
+                }));
         }).forEach(post -> {
             df.stringColumn(ProjectConfig.CUSTOMER_ID_COLUMN).append(post.customerId());
             df.stringColumn(ProjectConfig.CUSTOMER_NAME_COLUMN).append(post.customerName());

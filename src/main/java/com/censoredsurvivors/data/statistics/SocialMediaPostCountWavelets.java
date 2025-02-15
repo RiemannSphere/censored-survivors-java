@@ -18,7 +18,7 @@ public class SocialMediaPostCountWavelets {
         // Calculate next power of 2
         int targetLength = nextPowerOfTwo(originalCounts.length);
 
-        System.out.println("Target length: " + targetLength);
+        System.out.println("Target length: " + targetLength + ", Original length: " + originalCounts.length);
         
         // Create padded array
         double[] postCounts = new double[targetLength];

@@ -7,7 +7,15 @@ import java.time.LocalDate;
 import java.util.Random;
 import com.censoredsurvivors.util.ProjectConfig;
 
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+@AllArgsConstructor
 public class SocialMediaCustomerGenerator {
+
+    private boolean allCustomersFullLifetime = false;
+
     /**
      * Generates a table of customers.
      * 
@@ -28,7 +36,8 @@ public class SocialMediaCustomerGenerator {
         double percentOfLeftCensoredCustomers, 
         double percentOfRightCensoredCustomers,
         int observationPeriodInYears
-    ) {
+    ) {        
+        // TODO: make left and right censored params optional
         if (percentOfLeftCensoredCustomers + percentOfRightCensoredCustomers > 1) {
             throw new IllegalArgumentException("The sum of percentOfLeftCensoredCustomers and percentOfRightCensoredCustomers cannot be greater than 1.");
         }
@@ -70,27 +79,38 @@ public class SocialMediaCustomerGenerator {
             countries[i] = ProjectConfig.COUNTRY_VALUES[i % ProjectConfig.COUNTRY_VALUES.length];
             plans[i] = ProjectConfig.PLAN_VALUES[i % ProjectConfig.PLAN_VALUES.length];
 
+            if (allCustomersFullLifetime) {
+                contractStartDates[i] = LocalDate.ofEpochDay(startEpochDay);
+                contractEndDates[i] = LocalDate.ofEpochDay(endEpochDay);
+
+                continue;
+            }
+
             if (i < leftCensoredCount) {
                 // Left censored: start before observation, end within observation period
-                long randomStart = extStartEpochDay + random.nextLong(observationStartDate.toEpochDay() - extStartEpochDay - 1);
+                long randomStart = extStartEpochDay + random.nextLong(startEpochDay - extStartEpochDay - 1);
                 long randomEnd = startEpochDay + random.nextLong(endEpochDay - startEpochDay);
                 contractStartDates[i] = LocalDate.ofEpochDay(randomStart);
                 contractEndDates[i] = LocalDate.ofEpochDay(randomEnd);
+
+                continue;
             } 
-            else if (i < leftCensoredCount + rightCensoredCount) {
+            
+            if (i < leftCensoredCount + rightCensoredCount) {
                 // Right censored: start within observation, end after observation
                 long randomStart = startEpochDay + 1 + random.nextLong(endEpochDay - startEpochDay - 1);
                 long randomEnd = endEpochDay + random.nextLong(extEndEpochDay - endEpochDay);
                 contractStartDates[i] = LocalDate.ofEpochDay(randomStart);
                 contractEndDates[i] = LocalDate.ofEpochDay(randomEnd);
+
+                continue;
             } 
-            else {
-                // Normal: both dates within observation period
-                long randomStart = startEpochDay + 1 + random.nextLong(endEpochDay - startEpochDay - 1);
-                long randomEnd = randomStart + random.nextLong(endEpochDay - randomStart);
-                contractStartDates[i] = LocalDate.ofEpochDay(randomStart);
-                contractEndDates[i] = LocalDate.ofEpochDay(randomEnd);
-            }
+
+            // Normal: both dates within observation period
+            long randomStart = startEpochDay + 1 + random.nextLong(endEpochDay - startEpochDay - 1);
+            long randomEnd = randomStart + random.nextLong(endEpochDay - randomStart);
+            contractStartDates[i] = LocalDate.ofEpochDay(randomStart);
+            contractEndDates[i] = LocalDate.ofEpochDay(randomEnd);
         }
 
         return Table.create("Customers",

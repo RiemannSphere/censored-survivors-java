@@ -1,10 +1,7 @@
 package com.censoredsurvivors.data.generator;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.knowm.xchart.BitmapEncoder;
 import org.knowm.xchart.XYChart;
 import org.knowm.xchart.XYChartBuilder;
@@ -25,7 +22,7 @@ import com.censoredsurvivors.data.model.SocialMediaParam;
 import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
 
 public class SocialMediaPostsGeneratorTest {
-
+    private static final boolean ALL_CUSTOMERS_FULL_LIFETIME = true; // ensure enough posts are generated
     private static final int NUMBER_OF_CUSTOMERS = 1;
     private static final double PROPORTION_OF_LEFT_CENSORED_CUSTOMERS = 0.1;
     private static final double PROPORTION_OF_RIGHT_CENSORED_CUSTOMERS = 0.1;
@@ -33,7 +30,7 @@ public class SocialMediaPostsGeneratorTest {
 
     @Test
     public void testGeneratePosts() {
-        SocialMediaCustomerGenerator customerGenerator = new SocialMediaCustomerGenerator();
+        SocialMediaCustomerGenerator customerGenerator = new SocialMediaCustomerGenerator(ALL_CUSTOMERS_FULL_LIFETIME);
         Table customers = customerGenerator.generateCustomers(
             NUMBER_OF_CUSTOMERS, 
             PROPORTION_OF_LEFT_CENSORED_CUSTOMERS, 
@@ -67,7 +64,7 @@ public class SocialMediaPostsGeneratorTest {
 
     @Test
     public void testPlotPosts() throws IOException {
-        SocialMediaCustomerGenerator customerGenerator = new SocialMediaCustomerGenerator();
+        SocialMediaCustomerGenerator customerGenerator = new SocialMediaCustomerGenerator(ALL_CUSTOMERS_FULL_LIFETIME);
         Table singleCustomer = customerGenerator.generateCustomers(NUMBER_OF_CUSTOMERS, PROPORTION_OF_LEFT_CENSORED_CUSTOMERS, PROPORTION_OF_RIGHT_CENSORED_CUSTOMERS, NUMBER_OF_YEARS);
         SocialMediaPostsGenerator singleCustomerPostsGenerator = new SocialMediaPostsGenerator(singleCustomer);
         List<SocialMediaPostRule> postRules = List.of(
