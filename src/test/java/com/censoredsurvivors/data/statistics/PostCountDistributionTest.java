@@ -42,7 +42,7 @@ public class PostCountDistributionTest {
         compareDistributions(
             "Standard Deviation Comparison",
             new SocialMediaPostDistributionParams(100, 10, 1.0),
-            new SocialMediaPostDistributionParams(100, 25, 1.0),
+            new SocialMediaPostDistributionParams(100, 100, 1.0),
             "stddev-comparison"
         );
 
@@ -79,9 +79,25 @@ public class PostCountDistributionTest {
             .map(Double::valueOf)
             .collect(java.util.stream.Collectors.toList());
 
-        // Create histograms
-        Histogram histogram1 = new Histogram(data1, NUM_HISTOGRAM_BINS);
-        Histogram histogram2 = new Histogram(data2, NUM_HISTOGRAM_BINS);
+        // Create histograms with shared bins
+        double minValue = Math.min(
+            data1.stream().mapToDouble(d -> d).min().orElse(0),
+            data2.stream().mapToDouble(d -> d).min().orElse(0)
+        );
+        double maxValue = Math.max(
+            data1.stream().mapToDouble(d -> d).max().orElse(0),
+            data2.stream().mapToDouble(d -> d).max().orElse(0)
+        );
+        
+        // Create histograms with the same bin boundaries
+        Histogram histogram1 = new Histogram(data1, NUM_HISTOGRAM_BINS, minValue, maxValue);
+        Histogram histogram2 = new Histogram(data2, NUM_HISTOGRAM_BINS, minValue, maxValue);
+
+        // Calculate shared Y axis max
+        double maxY = Math.max(
+            histogram1.getyAxisData().stream().mapToDouble(d -> d).max().orElse(0),
+            histogram2.getyAxisData().stream().mapToDouble(d -> d).max().orElse(0)
+        );
 
         // Create two separate charts
         CategoryChart chart1 = new CategoryChartBuilder()
@@ -106,6 +122,8 @@ public class PostCountDistributionTest {
             chart.getStyler().setAvailableSpaceFill(0.99);
             chart.getStyler().setXAxisLabelRotation(-45);
             chart.getStyler().setDecimalPattern("#");
+            chart.getStyler().setYAxisMin(0.0);
+            chart.getStyler().setYAxisMax(maxY);
         }
 
         System.out.println("Histogram 1: " + histogram1.getxAxisData().stream().mapToInt(x -> x.intValue()).average());

@@ -34,9 +34,8 @@ public class SocialMediaPostsGenerator {
     /**
      * Generates social media posts for a given set of customers.
      * Uses two distributions: 
-     * - Log-normal distribution to generate the number of posts for a given week,
+     * - Normal distribution to generate the number of posts for a given week,
      * - Bernoulli distribution to choose whether to post or not for a given week.
-     * (We use the log-normal distribution instead of normal to avoid negative values.)
      * 
      * Channels are chosen with a random subset weighted by channel popularity.
      * 
