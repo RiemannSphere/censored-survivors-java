@@ -42,14 +42,14 @@ public class PostCountDistributionTest {
         compareDistributions(
             "Standard Deviation Comparison",
             new SocialMediaPostDistributionParams(100, 10, 1.0),
-            new SocialMediaPostDistributionParams(100, 100, 1.0),
+            new SocialMediaPostDistributionParams(100, 25, 1.0),
             "stddev-comparison"
         );
 
         // 3. Compare different means
         compareDistributions(
             "Mean Comparison",
-            new SocialMediaPostDistributionParams(250, 10, 1.0),
+            new SocialMediaPostDistributionParams(150, 10, 1.0),
             new SocialMediaPostDistributionParams(100, 10, 1.0),
             "mean-comparison"
         );
