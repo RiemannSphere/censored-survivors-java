@@ -17,6 +17,7 @@ public class PostCountDistribution {
      * @param frequency Frequency of posting = 1 / number of weeks between posts.
      */ 
     public PostCountDistribution(SocialMediaPostDistributionParams params) {
+        System.out.println("Normal distribution: " + params.mean() + ", " + params.stdDev());
         // Binomial distribution with n = 1 is equivalent to a Bernoulli distribution.
         this.bernoulliDistribution = new BinomialDistribution(1, params.frequency());
         this.normalDistribution = new NormalDistribution(params.mean(), params.stdDev());

@@ -67,55 +67,82 @@ public class PostCountDistributionTest {
         PostCountDistribution dist2 = new PostCountDistribution(params2);
 
         // Generate data
-        List<List<Double>> allData = new ArrayList<>();
-        List<String> labels = new ArrayList<>();
-
-        // Sample from first distribution
         List<Double> data1 = java.util.stream.Stream.generate(dist1::sample)
             .limit(NUM_SAMPLES)
             .filter(postCount -> postCount > 0)
             .map(Double::valueOf)
             .collect(java.util.stream.Collectors.toList());
-        allData.add(data1);
-        labels.add(String.format(Locale.US,
-            "Distribution 1 (μ=%d, σ=%d, f=%.2f) [n=%d]",
-            (int)params1.mean(), (int)params1.stdDev(), params1.frequency(), data1.size()));
 
-        // Sample from second distribution
         List<Double> data2 = java.util.stream.Stream.generate(dist2::sample)
             .limit(NUM_SAMPLES)
             .filter(postCount -> postCount > 0)
             .map(Double::valueOf)
             .collect(java.util.stream.Collectors.toList());
-        allData.add(data2);
-        labels.add(String.format(Locale.US,
-            "Distribution 2 (μ=%d, σ=%d, f=%.2f) [n=%d]",
-            (int)params2.mean(), (int)params2.stdDev(), params2.frequency(), data2.size()));
 
-        // Create Chart
-        CategoryChart chart = new CategoryChartBuilder()
+        // Create histograms
+        Histogram histogram1 = new Histogram(data1, NUM_HISTOGRAM_BINS);
+        Histogram histogram2 = new Histogram(data2, NUM_HISTOGRAM_BINS);
+
+        // Create two separate charts
+        CategoryChart chart1 = new CategoryChartBuilder()
             .width(800)
-            .height(600)
-            .title(title)
+            .height(300)  // Half the original height
+            .title(title + " - Post Count Distributions")
             .xAxisTitle("Post Count")
             .yAxisTitle("Frequency")
             .build();
 
-        // Customize Chart
-        chart.getStyler().setLegendPosition(LegendPosition.InsideNE);
-        chart.getStyler().setAvailableSpaceFill(0.99);
-        chart.getStyler().setOverlapped(true);
-        chart.getStyler().setXAxisLabelRotation(-45);
-        chart.getStyler().setDecimalPattern("#");
+        CategoryChart chart2 = new CategoryChartBuilder()
+            .width(800)
+            .height(300)  // Half the original height
+            .title("")  // Empty title for second chart since we have a combined title
+            .xAxisTitle("Post Count")
+            .yAxisTitle("Frequency")
+            .build();
 
-        // Add histogram series
-        for (int i = 0; i < allData.size(); i++) {
-            Histogram histogram = new Histogram(allData.get(i), NUM_HISTOGRAM_BINS);
-            chart.addSeries(labels.get(i), histogram.getxAxisData(), histogram.getyAxisData())
-                .setFillColor(COLORS.get(i));
+        // Customize Charts
+        for (CategoryChart chart : List.of(chart1, chart2)) {
+            chart.getStyler().setLegendPosition(LegendPosition.InsideNE);
+            chart.getStyler().setAvailableSpaceFill(0.99);
+            chart.getStyler().setXAxisLabelRotation(-45);
+            chart.getStyler().setDecimalPattern("#");
         }
 
-        // Save the chart
-        BitmapEncoder.saveBitmap(chart, "target/test-output/" + outputFileName, BitmapEncoder.BitmapFormat.PNG);
+        System.out.println("Histogram 1: " + histogram1.getxAxisData().stream().mapToInt(x -> x.intValue()).average());
+        System.out.println("Histogram 2: " + histogram2.getxAxisData().stream().mapToInt(x -> x.intValue()).average());
+
+        // Add histogram series to separate charts
+        chart1.addSeries(
+            String.format(Locale.US, "μ=%d, σ=%d, f=%.2f [n=%d]",
+                (int)params1.mean(), (int)params1.stdDev(), params1.frequency(), data1.size()),
+            histogram1.getxAxisData(),
+            histogram1.getyAxisData()
+        ).setFillColor(COLORS.get(0));
+
+        chart2.addSeries(
+            String.format(Locale.US, "μ=%d, σ=%d, f=%.2f [n=%d]",
+                (int)params2.mean(), (int)params2.stdDev(), params2.frequency(), data2.size()),
+            histogram2.getxAxisData(),
+            histogram2.getyAxisData()
+        ).setFillColor(COLORS.get(1));
+
+        // Create a combined vertical image
+        java.awt.image.BufferedImage chart1Image = BitmapEncoder.getBufferedImage(chart1);
+        java.awt.image.BufferedImage chart2Image = BitmapEncoder.getBufferedImage(chart2);
+        
+        java.awt.image.BufferedImage combined = new java.awt.image.BufferedImage(
+            800, 600, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        
+        java.awt.Graphics2D g2d = combined.createGraphics();
+        g2d.drawImage(chart1Image, 0, 0, null);
+        g2d.drawImage(chart2Image, 0, 300, null);
+        g2d.dispose();
+
+        // Save the combined image
+        javax.imageio.ImageIO.write(
+            combined, 
+            "PNG", 
+            new File("target/test-output/" + outputFileName + ".png")
+        );
     }
 }
