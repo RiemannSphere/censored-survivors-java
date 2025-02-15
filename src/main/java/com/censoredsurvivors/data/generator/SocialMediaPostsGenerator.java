@@ -13,7 +13,7 @@ import org.apache.commons.math3.distribution.UniformRealDistribution;
 import com.censoredsurvivors.data.model.SocialMediaParam;
 import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
 import com.censoredsurvivors.data.model.SocialMediaPostRule;
-import com.censoredsurvivors.data.statistics.PostCountDistribution;
+import com.censoredsurvivors.data.statistics.SocialMediaPostCountDistribution;
 import com.censoredsurvivors.util.ProjectConfig;
 import com.censoredsurvivors.data.model.SocialMediaChannel;
 
@@ -71,7 +71,7 @@ public class SocialMediaPostsGenerator {
             return startDate.datesUntil(endDate)
             .filter(date -> date.getDayOfWeek() == DayOfWeek.MONDAY) // samples are weeks
             .flatMap(date -> channels.stream().map(channel -> {
-                PostCountDistribution firstMatchingDistribution = postRules.stream()
+                SocialMediaPostCountDistribution firstMatchingDistribution = postRules.stream()
                     .filter(rule -> {
                         boolean matchesChannel = rule.param() == SocialMediaParam.CHANNEL && rule.paramValue().equals(channel.getDisplayName());
                         boolean matchesIndustry = rule.param() == SocialMediaParam.INDUSTRY && rule.paramValue().equals(industry);
@@ -80,14 +80,14 @@ public class SocialMediaPostsGenerator {
 
                         return matchesChannel || matchesIndustry || matchesCountry || matchesPlan;
                     })
-                    .map(rule -> new PostCountDistribution(rule.postCountDistributionParams()))
+                    .map(rule -> new SocialMediaPostCountDistribution(rule.postCountDistributionParams()))
                     .findFirst()
                     .orElseGet(() -> {
                         double randomMean = Math.max(1, meanDistribution.sample());
                         double randomStdDev = Math.max(1, randomMean * ProjectConfig.RANDOM.nextDouble());
                         double randomFrequency = Math.max(0.1, ProjectConfig.RANDOM.nextDouble());
 
-                        return new PostCountDistribution(
+                        return new SocialMediaPostCountDistribution(
                             new SocialMediaPostDistributionParams(randomMean, randomStdDev, randomFrequency));
                     });
 

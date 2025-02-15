@@ -63,8 +63,8 @@ public class PostCountDistributionTest {
     ) throws IOException {
         
         // Create distributions
-        PostCountDistribution dist1 = new PostCountDistribution(params1);
-        PostCountDistribution dist2 = new PostCountDistribution(params2);
+        SocialMediaPostCountDistribution dist1 = new SocialMediaPostCountDistribution(params1);
+        SocialMediaPostCountDistribution dist2 = new SocialMediaPostCountDistribution(params2);
 
         // Generate data
         List<Double> data1 = java.util.stream.Stream.generate(dist1::sample)
@@ -116,9 +116,6 @@ public class PostCountDistributionTest {
         chart.getStyler().setDecimalPattern("#");
         chart.getStyler().setYAxisMin(0.0);
         chart.getStyler().setYAxisMax(maxY);
-
-        System.out.println("Histogram 1: " + histogram1.getxAxisData().stream().mapToInt(x -> x.intValue()).average());
-        System.out.println("Histogram 2: " + histogram2.getxAxisData().stream().mapToInt(x -> x.intValue()).average());
 
         // Add both histogram series to the same chart
         chart.addSeries(
