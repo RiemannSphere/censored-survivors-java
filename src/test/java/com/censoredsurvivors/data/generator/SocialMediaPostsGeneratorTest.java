@@ -73,7 +73,7 @@ class PostsTestSetupSingleton {
     }
 }
 
-class PostsTestSetupSingletonWithChurn {
+class PostsWithChurnTestSetupSingleton {
     private static final boolean ALL_CUSTOMERS_FULL_LIFETIME = true; // ensure enough posts are generated
     private static final int NUMBER_OF_CUSTOMERS = 1;
     private static final int NUMBER_OF_YEARS = 5;
@@ -103,7 +103,7 @@ class PostsTestSetupSingletonWithChurn {
 }
 
 public class SocialMediaPostsGeneratorTest {
-    // @Test
+    @Test
     public void testGeneratePosts() {
         Table[] postsAndCustomers = PostsTestSetupSingleton.getPosts();
         Table posts = postsAndCustomers[0];
@@ -126,7 +126,7 @@ public class SocialMediaPostsGeneratorTest {
             String.format("Expected at least %d posts but found %d posts", minimumExpectedPosts, posts.rowCount()));
     }
 
-    // @Test
+    @Test
     public void testPlotPosts() throws IOException {
         Table[] postsAndCustomers = PostsTestSetupSingleton.getPosts();
         Table posts = postsAndCustomers[0];
@@ -177,7 +177,7 @@ public class SocialMediaPostsGeneratorTest {
         );
     }
 
-    // @Test
+    @Test
     public void testPlotPostsHistogram() throws IOException {
         Table[] postsAndCustomers = PostsTestSetupSingleton.getPosts();
         Table posts = postsAndCustomers[0];
@@ -228,7 +228,7 @@ public class SocialMediaPostsGeneratorTest {
 
     @Test
     public void testPlotPostsWithChurn() throws IOException {
-        Table[] postsAndCustomers = PostsTestSetupSingletonWithChurn.getPosts();
+        Table[] postsAndCustomers = PostsWithChurnTestSetupSingleton.getPosts();
         Table posts = postsAndCustomers[0];
         Table customers = postsAndCustomers[1];
 

@@ -84,19 +84,12 @@ public class SocialMediaPostsGenerator {
             String plan = customerRow.getString(ProjectConfig.PLAN_COLUMN);
             LocalDate startDate = customerRow.getDate(ProjectConfig.CONTRACT_START_DATE_COLUMN);
             LocalDate endDate = customerRow.getDate(ProjectConfig.CONTRACT_END_DATE_COLUMN);
-
-            System.out.println("Customer " + customerId + " has start date " + startDate + " and end date " + endDate);
-
             LocalDate churnDate = customerRow.getDate(ProjectConfig.CHURN_DATE_COLUMN);
             String churnReason = customerRow.getString(ProjectConfig.CHURN_REASON_COLUMN);
             
-            System.out.println("Customer " + customerId + " has churn date " + churnDate + " and churn reason " + churnReason);
-
             double churnFactor = churnReason == null || churnDate == null
                 ? 0.0
                 : Math.max(MINIMUM_CHURN_FACTOR, ProjectConfig.RANDOM.nextDouble());
-
-            System.out.println("Churn factor: " + churnFactor);
 
             return startDate.datesUntil(endDate)
                 .filter(date -> date.getDayOfWeek() == DayOfWeek.MONDAY) // samples are weeks
@@ -107,10 +100,7 @@ public class SocialMediaPostsGenerator {
                             boolean matchesIndustry = rule.param() == SocialMediaParam.INDUSTRY && rule.paramValue().equals(industry);
                             boolean matchesCountry = rule.param() == SocialMediaParam.COUNTRY && rule.paramValue().equals(country);
                             boolean matchesPlan = rule.param() == SocialMediaParam.PLAN && rule.paramValue().equals(plan);
-
-                            System.out.println("Matches channel: " + matchesChannel + ", matches industry: " + matchesIndustry + ", matches country: " + matchesCountry + ", matches plan: " + matchesPlan);
-                            System.out.println("Rule: " + rule);
-                            
+                                                        
                             return matchesChannel || matchesIndustry || matchesCountry || matchesPlan;
                         })
                         .map(rule -> {
@@ -119,11 +109,9 @@ public class SocialMediaPostsGenerator {
                                 churnDate == null || 
                                 date.isBefore(churnDate)
                             ) {
-                                System.out.println("No churn for customer " + customerId + " at date " + date);
                                 return new SocialMediaPostCountDistribution(rule.postCountDistributionParams());
                             }
 
-                            System.out.println("Churn for customer " + customerId + " at date " + date);
                             return new SocialMediaPostCountDistribution(
                                 new SocialMediaPostDistributionParams(
                                     rule.postCountDistributionParams().mean() * (1 - churnFactor),

@@ -11,7 +11,7 @@ import com.censoredsurvivors.data.model.SocialMediaPlan;
 
 public class ProjectConfig {
     // Seed for reproducibility.
-    public static final long RANDOM_SEED = 41L;
+    public static final long RANDOM_SEED = 1234567L;
     public static final Random RANDOM = new Random(RANDOM_SEED);
 
     public static final LocalDate OBSERVATION_START_DATE = LocalDate.of(2020, 1, 1);
