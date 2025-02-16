@@ -6,10 +6,11 @@ import java.time.LocalDate;
 import com.censoredsurvivors.data.model.SocialMediaIndustry;
 import com.censoredsurvivors.data.model.SocialMediaCountry;
 import com.censoredsurvivors.data.model.SocialMediaChannel;
+import com.censoredsurvivors.data.model.SocialMediaChurnReason;
 import com.censoredsurvivors.data.model.SocialMediaPlan;
 
 public class ProjectConfig {
-    // Random seed for reproducibility. Changing it might break the tests.💩
+    // Seed for reproducibility.
     public static final long RANDOM_SEED = 41L;
     public static final Random RANDOM = new Random(RANDOM_SEED);
 
@@ -27,10 +28,13 @@ public class ProjectConfig {
     public static final String WEEK_COLUMN = "week";
     public static final String POST_COUNT_COLUMN = "postCount";
     public static final String PLAN_COLUMN = "plan";
+    public static final String CHURN_DATE_COLUMN = "churnDate";
+    public static final String CHURN_REASON_COLUMN = "churnReason";
 
     // Make sure the params have different prime number of elements to avoid patterns
     public static final String[] INDUSTRY_VALUES = SocialMediaIndustry.getAllDisplayNames();
     public static final String[] COUNTRY_VALUES = SocialMediaCountry.getAllDisplayNames();
     public static final String[] CHANNEL_VALUES = SocialMediaChannel.getAllDisplayNames();
     public static final String[] PLAN_VALUES = SocialMediaPlan.getAllDisplayNames();
+    public static final String[] CHURN_REASON_VALUES = SocialMediaChurnReason.getAllDisplayNames();
 }

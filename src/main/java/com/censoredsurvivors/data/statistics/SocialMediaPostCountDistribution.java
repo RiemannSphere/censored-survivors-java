@@ -2,8 +2,11 @@ package com.censoredsurvivors.data.statistics;
 
 import org.apache.commons.math3.distribution.BinomialDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.random.RandomGenerator;
+import org.apache.commons.math3.random.RandomGeneratorFactory;
 
 import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
+import com.censoredsurvivors.util.ProjectConfig;
 
 public class SocialMediaPostCountDistribution {
     private BinomialDistribution bernoulliDistribution;
@@ -20,9 +23,10 @@ public class SocialMediaPostCountDistribution {
      * @param frequency Frequency of posting = 1 / number of weeks between posts.
      */ 
     public SocialMediaPostCountDistribution(SocialMediaPostDistributionParams params) {
+        RandomGenerator randomGenerator = RandomGeneratorFactory.createRandomGenerator(ProjectConfig.RANDOM);
         // Binomial distribution with n = 1 is equivalent to a Bernoulli distribution.
-        this.bernoulliDistribution = new BinomialDistribution(1, params.frequency());
-        this.normalDistribution = new NormalDistribution(params.mean(), params.stdDev());
+        this.bernoulliDistribution = new BinomialDistribution(randomGenerator, 1, params.frequency());
+        this.normalDistribution = new NormalDistribution(randomGenerator, params.mean(), params.stdDev());
     }
 
     public int sample() {

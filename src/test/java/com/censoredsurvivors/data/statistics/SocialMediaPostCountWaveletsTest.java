@@ -29,8 +29,6 @@ import org.knowm.xchart.style.Styler.LegendPosition;
 class WaveletTestSetupSingleton {
     private static final boolean ALL_CUSTOMERS_FULL_LIFETIME = true; // ensure enough posts are generated
     private static final int NUMBER_OF_CUSTOMERS = 1;
-    private static final double PROPORTION_OF_LEFT_CENSORED_CUSTOMERS = 0.1;
-    private static final double PROPORTION_OF_RIGHT_CENSORED_CUSTOMERS = 0.1;
     private static final int NUMBER_OF_YEARS = 5;
 
     private static Table posts;
@@ -38,7 +36,7 @@ class WaveletTestSetupSingleton {
     public static Table getPosts() {
         if (posts == null) {
             SocialMediaCustomerGenerator customerGenerator = new SocialMediaCustomerGenerator(ALL_CUSTOMERS_FULL_LIFETIME);
-            Table customers = customerGenerator.generateCustomers(NUMBER_OF_CUSTOMERS, PROPORTION_OF_LEFT_CENSORED_CUSTOMERS, PROPORTION_OF_RIGHT_CENSORED_CUSTOMERS, NUMBER_OF_YEARS);
+            Table customers = customerGenerator.generateUncensoredCustomers(NUMBER_OF_CUSTOMERS, NUMBER_OF_YEARS);
             SocialMediaPostsGenerator postsGenerator = new SocialMediaPostsGenerator(customers);
             List<SocialMediaPostRule> postRules = List.of(
                 new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.FACEBOOK.name(), new SocialMediaPostDistributionParams(200, 20, 0.5)),

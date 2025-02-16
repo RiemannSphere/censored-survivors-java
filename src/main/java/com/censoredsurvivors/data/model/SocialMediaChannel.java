@@ -11,14 +11,14 @@ import com.censoredsurvivors.util.ProjectConfig;
  * The social media channels that are supported.
  * 
  * The popularity of the channels is used to determine the probability of a customer posting on a given channel.
- * Probabilities should be normalized so that the sum of all probabilities is 1.
  */
 public enum SocialMediaChannel {
-    FACEBOOK("Facebook", 0.4),
-    INSTAGRAM("Instagram", 0.3),
-    TWITTER("Twitter", 0.2),
-    LINKEDIN("LinkedIn", 0.05),
-    YOUTUBE("YouTube", 0.05);
+    FACEBOOK("Facebook", 0.8),
+    INSTAGRAM("Instagram", 0.6),
+    TIKTOK("TikTok", 0.4),
+    TWITTER("Twitter", 0.3),
+    LINKEDIN("LinkedIn", 0.3),
+    YOUTUBE("YouTube", 0.1);
 
     private String displayName;
     private double popularity;
@@ -26,11 +26,6 @@ public enum SocialMediaChannel {
     private static final Map<String, SocialMediaChannel> DISPLAY_NAME_MAP;
 
     static {
-        double sum = Arrays.stream(SocialMediaChannel.getAllPopularities()).sum();
-        if (Math.abs(sum - 1.0) > 1e-10) {  // Using epsilon comparison for floating point
-            throw new IllegalArgumentException("Popularity values must sum to 1");
-        }
-
         DISPLAY_NAME_MAP = Arrays.stream(values())
             .collect(Collectors.toMap(
                 SocialMediaChannel::getDisplayName,

@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.censoredsurvivors.util.ProjectConfig;
 
 import tech.tablesaw.api.DateColumn;
+import tech.tablesaw.api.StringColumn;
 import tech.tablesaw.api.Table;
 import java.time.LocalDate;
 
@@ -92,6 +93,51 @@ public class SocialMediaCustomerGeneratorTest {
                 scenario, maxContractEndDate, extendedObservationEndDate)
         );
     }
+
+    @ParameterizedTest
+    @CsvSource({
+        "'Churn zero', 10_000, 1, 0.0",
+        "'Churn small', 10_000, 1, 0.1",
+        "'Churn medium', 10_000, 5, 0.5",
+        "'Churn large', 10_000, 15, 0.8",
+        "'Churn one', 10_000, 1, 1.0",
+    })
+    void shouldGenerateCustomersWithChurn(
+        String scenario,
+        int numberOfCustomers, 
+        int observationPeriodInYears,
+        double churnProbability
+    ) {
+        int delta = (int)(0.05 * numberOfCustomers);
+        // ensure the contract duration is over the minimum duration for churn
+        boolean allCustomersFullLifetime = true;
+        SocialMediaCustomerGenerator generator = new SocialMediaCustomerGenerator(allCustomersFullLifetime);
+        Table customers = generator.generateUncensoredCustomers(
+            numberOfCustomers, 
+            observationPeriodInYears,
+            churnProbability
+        );
+
+        int expectedChurnedCustomers = (int)(numberOfCustomers * churnProbability);
+
+        DateColumn churnDateColumn = customers.where(
+            customers.dateColumn(ProjectConfig.CHURN_DATE_COLUMN).isNotMissing()
+        ).dateColumn(ProjectConfig.CHURN_DATE_COLUMN);
+        StringColumn churnReasonColumn = customers.where(
+            customers.stringColumn(ProjectConfig.CHURN_REASON_COLUMN).isNotMissing()
+        ).stringColumn(ProjectConfig.CHURN_REASON_COLUMN);
+
+        Assertions.assertEquals(expectedChurnedCustomers, churnDateColumn.size(), delta,
+            String.format("[%s] Number of churn dates", scenario));
+        Assertions.assertEquals(expectedChurnedCustomers, churnReasonColumn.size(), delta,
+            String.format("[%s] Number of churn reasons", scenario));
+
+        for (int i = 0; i < churnDateColumn.size(); i++) {
+            Assertions.assertTrue(churnDateColumn.get(i).isAfter(ProjectConfig.OBSERVATION_START_DATE), 
+            String.format("[%s] Churn date %s should be after observation start date %s", 
+                scenario, churnDateColumn.get(i), ProjectConfig.OBSERVATION_START_DATE));
+        }
+    }
     
     @Test
     void shouldThrowExceptionIfPercentOfLeftCensoredCustomersIsNegative() {
@@ -127,4 +173,20 @@ public class SocialMediaCustomerGeneratorTest {
             generator.generateCustomers(100, 0.6, 0.6, 5);
         });
     }
+
+    @Test
+    void shouldThrowExceptionIfChurnProbabilityIsNegative() {
+        Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            generator.generateCustomers(100, 0.1, 0.1, 5, -0.1);
+        });
+    }
+
+    @Test
+    void shouldThrowExceptionIfChurnProbabilityIsGreaterThanOne() {
+        Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            generator.generateCustomers(100, 0.1, 0.1, 5, 1.1);
+        });
+    }   
+
+
 }

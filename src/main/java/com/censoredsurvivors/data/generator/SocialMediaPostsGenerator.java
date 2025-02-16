@@ -8,7 +8,10 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.IsoFields;
 import java.util.List;
+
 import org.apache.commons.math3.distribution.UniformRealDistribution;
+import org.apache.commons.math3.random.RandomGenerator;
+import org.apache.commons.math3.random.RandomGeneratorFactory;
 
 import com.censoredsurvivors.data.model.SocialMediaParam;
 import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
@@ -21,14 +24,17 @@ import com.censoredsurvivors.data.model.SocialMediaChannel;
  * Generates social media posts for a given set of customers.
  */
 public class SocialMediaPostsGenerator {
-    private UniformRealDistribution meanDistribution = new UniformRealDistribution(1, 500);
+    private final UniformRealDistribution meanDistribution;
 
     private record Post(String customerId, String customerName, SocialMediaChannel channel, int year, int week, int postCount) {}
 
-    private Table customers;
+    private final Table customers;
 
     public SocialMediaPostsGenerator(Table customers) {
         this.customers = customers;
+
+        RandomGenerator randomGenerator = RandomGeneratorFactory.createRandomGenerator(ProjectConfig.RANDOM);
+        this.meanDistribution = new UniformRealDistribution(randomGenerator, 1, 500);
     }
 
     /**
