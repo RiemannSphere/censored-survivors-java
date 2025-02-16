@@ -10,16 +10,11 @@ public class SocialMediaPostCountWavelets {
     private final Wavelet wavelet = new HaarWavelet();
 
     public double[] transform(Table posts) {
-        // Get original post counts
         double[] originalCounts = posts.stream()
             .mapToDouble(row -> row.getInt(ProjectConfig.POST_COUNT_COLUMN))
             .toArray();
 
-        // Calculate next power of 2
         int targetLength = nextPowerOfTwo(originalCounts.length);
-
-        System.out.println("Target length: " + targetLength + ", Original length: " + originalCounts.length);
-        
         // Create padded array
         double[] postCounts = new double[targetLength];
         // Copy original values to the end of the new array, leaving zeros at the beginning

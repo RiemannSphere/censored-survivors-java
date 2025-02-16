@@ -19,11 +19,13 @@ import com.censoredsurvivors.data.model.SocialMediaPostRule;
 import com.censoredsurvivors.data.statistics.SocialMediaPostCountDistribution;
 import com.censoredsurvivors.util.ProjectConfig;
 import com.censoredsurvivors.data.model.SocialMediaChannel;
+import com.censoredsurvivors.data.model.SocialMediaChurnReason;
 
 /**
  * Generates social media posts for a given set of customers.
  */
 public class SocialMediaPostsGenerator {
+    private static final double MINIMUM_CHURN_FACTOR = 0.5;
     private final UniformRealDistribution meanDistribution;
 
     private record Post(String customerId, String customerName, SocialMediaChannel channel, int year, int week, int postCount) {}
@@ -52,12 +54,18 @@ public class SocialMediaPostsGenerator {
      * The first matching rule is used to generate the posts. If no rule is found,
      * a random mean, stdDev and frequency are sampled from the distributions and used to generate the posts.
      * 
+     * If customer churn is detected, the post count mean and stdDev are reduced by the churn factor.
+     * 
      * @param tableName Name of the table to save the generated posts to.
      * @param postRules Rules for generating the posts.
      * @param channels Channels to generate the posts for.
      * @return Table with the generated posts.
      */
-    public Table generatePosts(String tableName, List<SocialMediaPostRule> postRules, List<SocialMediaChannel> channels) {
+    public Table generatePosts(
+        String tableName, 
+        List<SocialMediaPostRule> postRules, 
+        List<SocialMediaChannel> channels
+    ) {
         Table df = Table.create(tableName);
         df.addColumns(
             StringColumn.create(ProjectConfig.CUSTOMER_ID_COLUMN),
@@ -77,8 +85,18 @@ public class SocialMediaPostsGenerator {
             LocalDate startDate = customerRow.getDate(ProjectConfig.CONTRACT_START_DATE_COLUMN);
             LocalDate endDate = customerRow.getDate(ProjectConfig.CONTRACT_END_DATE_COLUMN);
 
-            System.out.println("[SocialMediaPostsGenerator] Generating posts for customer " + customerId + " with channels " + channels);
-            System.out.println("[SocialMediaPostsGenerator] Date range: " + startDate + " to " + endDate);
+            System.out.println("Customer " + customerId + " has start date " + startDate + " and end date " + endDate);
+
+            LocalDate churnDate = customerRow.getDate(ProjectConfig.CHURN_DATE_COLUMN);
+            String churnReason = customerRow.getString(ProjectConfig.CHURN_REASON_COLUMN);
+            
+            System.out.println("Customer " + customerId + " has churn date " + churnDate + " and churn reason " + churnReason);
+
+            double churnFactor = churnReason == null || churnDate == null
+                ? 0.0
+                : Math.max(MINIMUM_CHURN_FACTOR, ProjectConfig.RANDOM.nextDouble());
+
+            System.out.println("Churn factor: " + churnFactor);
 
             return startDate.datesUntil(endDate)
                 .filter(date -> date.getDayOfWeek() == DayOfWeek.MONDAY) // samples are weeks
@@ -90,9 +108,30 @@ public class SocialMediaPostsGenerator {
                             boolean matchesCountry = rule.param() == SocialMediaParam.COUNTRY && rule.paramValue().equals(country);
                             boolean matchesPlan = rule.param() == SocialMediaParam.PLAN && rule.paramValue().equals(plan);
 
+                            System.out.println("Matches channel: " + matchesChannel + ", matches industry: " + matchesIndustry + ", matches country: " + matchesCountry + ", matches plan: " + matchesPlan);
+                            System.out.println("Rule: " + rule);
+                            
                             return matchesChannel || matchesIndustry || matchesCountry || matchesPlan;
                         })
-                        .map(rule -> new SocialMediaPostCountDistribution(rule.postCountDistributionParams()))
+                        .map(rule -> {
+                            if (
+                                churnReason != SocialMediaChurnReason.POST_COUNT_DROP.getDisplayName() ||
+                                churnDate == null || 
+                                date.isBefore(churnDate)
+                            ) {
+                                System.out.println("No churn for customer " + customerId + " at date " + date);
+                                return new SocialMediaPostCountDistribution(rule.postCountDistributionParams());
+                            }
+
+                            System.out.println("Churn for customer " + customerId + " at date " + date);
+                            return new SocialMediaPostCountDistribution(
+                                new SocialMediaPostDistributionParams(
+                                    rule.postCountDistributionParams().mean() * (1 - churnFactor),
+                                    rule.postCountDistributionParams().stdDev() * (1 - churnFactor),
+                                    rule.postCountDistributionParams().frequency()
+                                )
+                            );
+                        })
                         .findFirst()
                         .orElseGet(() -> {
                             double randomMean = Math.max(1, meanDistribution.sample());
