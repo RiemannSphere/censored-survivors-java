@@ -23,12 +23,14 @@ import java.util.stream.IntStream;
 import java.awt.BasicStroke;
 import java.time.temporal.WeekFields;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 
 import com.censoredsurvivors.util.ProjectConfig;
 import com.censoredsurvivors.data.model.SocialMediaPostRule;
 import com.censoredsurvivors.data.model.SocialMediaChannel;
 import com.censoredsurvivors.data.model.SocialMediaParam;
 import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
+import com.censoredsurvivors.data.statistics.Cusum;
 
 class PostsTestSetupSingleton {
     private static final boolean ALL_CUSTOMERS_FULL_LIFETIME = true; // ensure enough posts are generated
@@ -244,10 +246,10 @@ public class SocialMediaPostsGeneratorTest {
             tech.tablesaw.aggregate.AggregateFunctions.sum
         ).by(ProjectConfig.YEAR_COLUMN, ProjectConfig.WEEK_COLUMN); 
         
-        // Create XY line chart
-        XYChart chart = new XYChartBuilder()
+        // Create two separate charts
+        XYChart originalChart = new XYChartBuilder()
             .width(800)
-            .height(600)
+            .height(400)
             .title("Weekly Post Counts")
             .xAxisTitle(String.format("Week (from %s to %s)",
                 startDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
@@ -256,7 +258,14 @@ public class SocialMediaPostsGeneratorTest {
             .yAxisTitle("Number of Posts")
             .build();
 
-        // Convert data to arrays for plotting
+        XYChart cusumChart = new XYChartBuilder()
+            .width(800)
+            .height(200)
+            .title("CUSUM Analysis")
+            .xAxisTitle("Week")
+            .yAxisTitle("CUSUM Value")
+            .build();
+
         double[] weeks = IntStream.range(0, weeklyPosts.rowCount())
             .mapToDouble(i -> i)
             .toArray(); 
@@ -264,18 +273,18 @@ public class SocialMediaPostsGeneratorTest {
         double[] postCounts = weeklyPosts.doubleColumn("Sum [" + ProjectConfig.POST_COUNT_COLUMN + "]")
             .asDoubleArray();
 
-        // Add the data series
-        chart.addSeries("Posts", weeks, postCounts)
+        // Add the data series to original chart
+        originalChart.addSeries("Posts", weeks, postCounts)
             .setXYSeriesRenderStyle(XYSeriesRenderStyle.Line);  
 
-        // Add vertical line for churn date
+        // Add vertical line for churn date to original chart
         int churnYear = churnDate.getYear();
         int churnWeek = churnDate.get(WeekFields.ISO.weekOfWeekBasedYear());
         double churnWeekIndex = churnWeek - 1 + (churnYear - weeklyPosts.intColumn(ProjectConfig.YEAR_COLUMN).min()) * 52;
 
         double maxPosts = Math.ceil(posts.intColumn(ProjectConfig.POST_COUNT_COLUMN).max() * 1.1);
-        chart.addSeries(
-            "Churn Date: " + churnDate.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE),
+        originalChart.addSeries(
+            "Churn Date: " + churnDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
             new double[]{churnWeekIndex, churnWeekIndex}, 
             new double[]{0, maxPosts}
         )
@@ -283,16 +292,131 @@ public class SocialMediaPostsGeneratorTest {
             .setLineColor(Color.RED)
             .setShowInLegend(true);
 
-        // Customize chart
-        chart.getStyler().setLegendPosition(LegendPosition.InsideNE);
-        chart.getStyler().setMarkerSize(0);
-        chart.getStyler().setYAxisMin(0.0); 
+        // Compute CUSUM with baseline from first 20% of data
+        int baselinePeriod = (int)(postCounts.length * 0.2);
+        double reference = Arrays.stream(postCounts)
+            .limit(baselinePeriod)
+            .average()
+            .orElse(0);
+        double threshold = reference * 5;
+        Cusum.Result cusumResult = Cusum.computeCusum(postCounts, reference, threshold);
 
-        // Save chart
-        BitmapEncoder.saveBitmap(
-            chart, 
-            "target/test-output/weekly-posts-with-churn.png", 
-            BitmapEncoder.BitmapFormat.PNG
+        // Get anomaly index directly from CUSUM result
+        int anomalyIndex = cusumResult.anomalyIndex();
+
+        // Add positive CUSUM series to CUSUM chart
+        double[] positiveCusumValues = Arrays.copyOfRange(
+            cusumResult.positiveCusumValues(), 
+            1,
+            cusumResult.positiveCusumValues().length
+        );
+        cusumChart.addSeries("Positive CUSUM", weeks, positiveCusumValues)
+            .setXYSeriesRenderStyle(XYSeriesRenderStyle.Line)
+            .setLineColor(new Color(0, 150, 0));  // Dark green
+
+        // Add negative CUSUM series to CUSUM chart
+        double[] negativeCusumValues = Arrays.copyOfRange(
+            cusumResult.negativeCusumValues(),
+            1,
+            cusumResult.negativeCusumValues().length
+        );
+        cusumChart.addSeries("Negative CUSUM", weeks, negativeCusumValues)
+            .setXYSeriesRenderStyle(XYSeriesRenderStyle.Line)
+            .setLineColor(new Color(150, 0, 0));  // Dark red
+
+        // Add churn line to CUSUM chart
+        double maxCusumValue = Math.max(
+            Arrays.stream(positiveCusumValues).max().orElse(0),
+            Arrays.stream(negativeCusumValues).max().orElse(0)
+        );
+        double minCusumValue = -maxCusumValue;  // Make it symmetric
+
+        // Ensure there's enough room for threshold lines
+        maxCusumValue = Math.max(maxCusumValue, threshold) * 1.2;  // 20% padding
+        minCusumValue = Math.min(minCusumValue, -threshold) * 1.2;
+
+        cusumChart.addSeries(
+            "Churn Date",
+            new double[]{churnWeekIndex, churnWeekIndex}, 
+            new double[]{minCusumValue, maxCusumValue}
+        )
+            .setLineStyle(new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, new float[]{8.0f}, 0.0f))
+            .setLineColor(Color.RED)
+            .setShowInLegend(false);
+
+        // Add threshold lines to CUSUM chart
+        cusumChart.addSeries(
+            "Threshold",
+            new double[]{weeks[0], weeks[weeks.length - 1]},
+            new double[]{threshold, threshold}
+        )
+            .setLineStyle(new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, new float[]{4.0f}, 0.0f))
+            .setLineColor(new Color(100, 100, 100))  // Gray
+            .setShowInLegend(true);
+
+        cusumChart.addSeries(
+            "Negative Threshold",
+            new double[]{weeks[0], weeks[weeks.length - 1]},
+            new double[]{-threshold, -threshold}
+        )
+            .setLineStyle(new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, new float[]{4.0f}, 0.0f))
+            .setLineColor(new Color(100, 100, 100))  // Gray
+            .setShowInLegend(false);
+
+        // Add anomaly line to both charts if anomaly was detected
+        if (anomalyIndex >= 0) {
+            // Add to original chart
+            originalChart.addSeries(
+                "CUSUM Anomaly",
+                new double[]{anomalyIndex, anomalyIndex}, 
+                new double[]{0, maxPosts}
+            )
+                .setLineStyle(new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, new float[]{8.0f}, 0.0f))
+                .setLineColor(Color.ORANGE)
+                .setShowInLegend(true);
+
+            // Add to CUSUM chart
+            cusumChart.addSeries(
+                "CUSUM Anomaly",
+                new double[]{anomalyIndex, anomalyIndex}, 
+                new double[]{minCusumValue, maxCusumValue}
+            )
+                .setLineStyle(new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, new float[]{8.0f}, 0.0f))
+                .setLineColor(Color.ORANGE)
+                .setShowInLegend(false);
+        }
+
+        // Customize charts
+        for (XYChart chart : new XYChart[]{originalChart, cusumChart}) {
+            chart.getStyler().setLegendPosition(LegendPosition.InsideNE);
+            chart.getStyler().setMarkerSize(0);
+            chart.getStyler().setPlotGridLinesVisible(false);
+        }
+        originalChart.getStyler().setYAxisMin(0.0);
+        cusumChart.getStyler().setYAxisMin(minCusumValue);
+        cusumChart.getStyler().setYAxisMax(maxCusumValue);
+
+        // Create a combined image
+        var originalImage = BitmapEncoder.getBufferedImage(originalChart);
+        var cusumImage = BitmapEncoder.getBufferedImage(cusumChart);
+        
+        var combinedImage = new java.awt.image.BufferedImage(
+            800, 600, 
+            java.awt.image.BufferedImage.TYPE_INT_RGB
+        );
+        
+        var g = combinedImage.createGraphics();
+        g.setColor(java.awt.Color.WHITE);
+        g.fillRect(0, 0, 800, 600);
+        g.drawImage(originalImage, 0, 0, null);
+        g.drawImage(cusumImage, 0, 400, null);
+        g.dispose();
+
+        // Save the combined image
+        javax.imageio.ImageIO.write(
+            combinedImage,
+            "png",
+            new java.io.File("target/test-output/weekly-posts-with-churn.png")
         );
     }
 }
