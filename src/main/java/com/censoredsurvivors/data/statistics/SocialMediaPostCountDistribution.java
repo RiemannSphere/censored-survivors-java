@@ -12,6 +12,10 @@ public class SocialMediaPostCountDistribution {
     private BinomialDistribution bernoulliDistribution;
     private NormalDistribution normalDistribution;
     
+    private double mean;
+    private double stdDev;
+    private double frequency;
+
     /**
      * Generates a distribution for the number of posts for a given week.
      * Uses two distributions: 
@@ -23,15 +27,22 @@ public class SocialMediaPostCountDistribution {
      * @param frequency Frequency of posting = 1 / number of weeks between posts.
      */ 
     public SocialMediaPostCountDistribution(SocialMediaPostDistributionParams params) {
+        this.mean = params.mean();
+        this.stdDev = params.stdDev();
+        this.frequency = params.frequency();
+
         RandomGenerator randomGenerator = RandomGeneratorFactory.createRandomGenerator(ProjectConfig.RANDOM);
         // Binomial distribution with n = 1 is equivalent to a Bernoulli distribution.
-        this.bernoulliDistribution = new BinomialDistribution(randomGenerator, 1, params.frequency());
-        this.normalDistribution = new NormalDistribution(randomGenerator, params.mean(), params.stdDev());
+        this.bernoulliDistribution = new BinomialDistribution(randomGenerator, 1, this.frequency);
+        this.normalDistribution = new NormalDistribution(randomGenerator, this.mean, this.stdDev);
     }
 
     public int sample() {
+        if (this.bernoulliDistribution.sample() == 0) {
+            return 0;
+        }
+
         return (int) Math.round(
-            this.bernoulliDistribution.sample() * 
             Math.max(0, this.normalDistribution.sample())
         );
     }

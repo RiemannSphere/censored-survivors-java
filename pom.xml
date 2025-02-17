@@ -66,7 +66,7 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.18.30</version>
+      <version>1.18.36</version>
       <scope>provided</scope>
     </dependency>
     <!-- Smile -->
@@ -84,8 +84,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.11.0</version>
         <configuration>
-          <source>21</source>
-          <target>21</target>
+          <release>21</release>
         </configuration>
       </plugin>
       <!-- Maven Surefire Plugin for running tests -->

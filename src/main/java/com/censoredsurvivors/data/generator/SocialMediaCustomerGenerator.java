@@ -11,19 +11,24 @@ import org.apache.commons.math3.util.Pair;
 
 import com.censoredsurvivors.util.ProjectConfig;
 
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 
-@NoArgsConstructor
-@AllArgsConstructor
 public class SocialMediaCustomerGenerator {
     private final Random random = ProjectConfig.RANDOM;
-    private boolean allCustomersFullLifetime = false;
 
     // percentage of the contract duration that the churn can happen, should be between 0 and 1
     private final double EARLIEST_POSSIBLE_CHURN = 0.2;
     private final double LATEST_POSSIBLE_CHURN = 0.8;
     private final long MIN_DURATION_FOR_CHURN = 360;
+
+    private boolean allCustomersFullLifetime;
+
+    public SocialMediaCustomerGenerator(boolean allCustomersFullLifetime) {
+        this.allCustomersFullLifetime = allCustomersFullLifetime;
+    }
+
+    public SocialMediaCustomerGenerator() {
+        this(false);
+    }
 
     /**
      * @see #generateCustomers(int, double, double, int)

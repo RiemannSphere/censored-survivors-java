@@ -83,6 +83,10 @@ class PostsWithChurnTestSetupSingleton {
 
     private static Table posts;
     private static Table customers;
+
+    public static final double MEAN_POST_COUNT = 200;
+    public static final double STANDARD_DEVIATION_POST_COUNT = 30;
+    public static final double FREQUENCY_POST_COUNT = 0.8;
     
     public static Table[] getPosts() {
         if (customers == null) {
@@ -94,7 +98,7 @@ class PostsWithChurnTestSetupSingleton {
             SocialMediaPostsGenerator postsGenerator = new SocialMediaPostsGenerator(customers);
             // only generate posts for one channel to make churn more visible
             List<SocialMediaPostRule> postRules = List.of(
-                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.FACEBOOK.getDisplayName(), new SocialMediaPostDistributionParams(200, 5, 0.8))
+                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.FACEBOOK.getDisplayName(), new SocialMediaPostDistributionParams(MEAN_POST_COUNT, STANDARD_DEVIATION_POST_COUNT, FREQUENCY_POST_COUNT))
             );
             List<SocialMediaChannel> channels = List.of(SocialMediaChannel.FACEBOOK);
             posts = postsGenerator.generatePosts("Platform Posts", postRules, channels);
@@ -229,7 +233,7 @@ public class SocialMediaPostsGeneratorTest {
     }
 
     @Test
-    public void testPlotPostsWithChurn() throws IOException {
+    public void testPlotPostsWithChurnAndPerfectCusumReference() throws IOException {
         Table[] postsAndCustomers = PostsWithChurnTestSetupSingleton.getPosts();
         Table posts = postsAndCustomers[0];
         Table customers = postsAndCustomers[1];
@@ -273,9 +277,36 @@ public class SocialMediaPostsGeneratorTest {
         double[] postCounts = weeklyPosts.doubleColumn("Sum [" + ProjectConfig.POST_COUNT_COLUMN + "]")
             .asDoubleArray();
 
+        // median is the reference
+        double reference = PostsWithChurnTestSetupSingleton.MEAN_POST_COUNT;
+        // get 5 sigmas from the median
+        double threshold = reference + 5 * PostsWithChurnTestSetupSingleton.STANDARD_DEVIATION_POST_COUNT;
+        
+        Cusum.Result cusumResult = Cusum.compute(postCounts, reference, threshold, true);
+
+        // Get anomaly index directly from CUSUM result
+        int anomalyIndex = cusumResult.anomalyIndex();
+
+        // Add CUSUM series to CUSUM chart
+        double[] cusumValues = Arrays.copyOfRange(
+            cusumResult.cusumValues(), 
+            1,
+            cusumResult.cusumValues().length
+        );
+
         // Add the data series to original chart
         originalChart.addSeries("Posts", weeks, postCounts)
             .setXYSeriesRenderStyle(XYSeriesRenderStyle.Line);  
+
+        // Add reference line to original chart
+        originalChart.addSeries(
+            "Reference",
+            new double[]{weeks[0], weeks[weeks.length - 1]},
+            new double[]{reference, reference}
+        )
+            .setLineStyle(new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, new float[]{2.0f}, 0.0f))
+            .setLineColor(new Color(100, 100, 100))  // Gray
+            .setShowInLegend(true);
 
         // Add vertical line for churn date to original chart
         int churnYear = churnDate.getYear();
@@ -292,48 +323,14 @@ public class SocialMediaPostsGeneratorTest {
             .setLineColor(Color.RED)
             .setShowInLegend(true);
 
-        // Compute CUSUM with baseline from first 20% of data
-        int baselinePeriod = (int)(postCounts.length * 0.2);
-        double reference = Arrays.stream(postCounts)
-            .limit(baselinePeriod)
-            .average()
-            .orElse(0);
-        double threshold = reference * 5;
-        Cusum.Result cusumResult = Cusum.computeCusum(postCounts, reference, threshold);
-
-        // Get anomaly index directly from CUSUM result
-        int anomalyIndex = cusumResult.anomalyIndex();
-
-        // Add positive CUSUM series to CUSUM chart
-        double[] positiveCusumValues = Arrays.copyOfRange(
-            cusumResult.positiveCusumValues(), 
-            1,
-            cusumResult.positiveCusumValues().length
-        );
-        cusumChart.addSeries("Positive CUSUM", weeks, positiveCusumValues)
+        cusumChart.addSeries("CUSUM", weeks, cusumValues)
             .setXYSeriesRenderStyle(XYSeriesRenderStyle.Line)
             .setLineColor(new Color(0, 150, 0));  // Dark green
 
-        // Add negative CUSUM series to CUSUM chart
-        double[] negativeCusumValues = Arrays.copyOfRange(
-            cusumResult.negativeCusumValues(),
-            1,
-            cusumResult.negativeCusumValues().length
-        );
-        cusumChart.addSeries("Negative CUSUM", weeks, negativeCusumValues)
-            .setXYSeriesRenderStyle(XYSeriesRenderStyle.Line)
-            .setLineColor(new Color(150, 0, 0));  // Dark red
-
-        // Add churn line to CUSUM chart
-        double maxCusumValue = Math.max(
-            Arrays.stream(positiveCusumValues).max().orElse(0),
-            Arrays.stream(negativeCusumValues).max().orElse(0)
-        );
-        double minCusumValue = -maxCusumValue;  // Make it symmetric
 
         // Ensure there's enough room for threshold lines
-        maxCusumValue = Math.max(maxCusumValue, threshold) * 1.2;  // 20% padding
-        minCusumValue = Math.min(minCusumValue, -threshold) * 1.2;
+        double maxCusumValue = threshold * 1.2;  // 20% padding
+        double minCusumValue = -threshold * 1.2;
 
         cusumChart.addSeries(
             "Churn Date",
