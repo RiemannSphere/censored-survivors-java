@@ -75,6 +75,12 @@
       <artifactId>smile-core</artifactId>
       <version>4.2.0</version>
     </dependency>
+    <!-- Asciitable -->
+    <dependency>
+      <groupId>de.vandermeer</groupId>
+      <artifactId>asciitable</artifactId>
+      <version>0.3.2</version>
+  </dependency>
   </dependencies>
 
   <build>

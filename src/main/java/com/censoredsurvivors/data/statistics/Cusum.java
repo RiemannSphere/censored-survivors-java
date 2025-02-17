@@ -3,22 +3,25 @@ package com.censoredsurvivors.data.statistics;
 import java.util.ArrayList;
 
 public class Cusum {
-
-    /**
-     * Smoothing factor for the CUSUM algorithm.
-     * 0 means full smoothing, 1 means no smoothing.
-     */
-    private static final double SMOOTHING = 0.7;
-
     public record Result(
         double[] cusumValues,
         int anomalyIndex
     ) {}
 
+    private double smoothing;
+
+    /**
+     * @param smoothing the smoothing factor of the CUSUM algorithm.
+     * 0 means full smoothing, 1 means no smoothing.
+     */
+    public Cusum(double smoothing) {
+        this.smoothing = smoothing;
+    }
+
     /**
      * @see #compute(double[], double, double, boolean)
      */
-    public static Result compute(double[] data, double referenceValue, double threshold) {
+    public Result compute(double[] data, double referenceValue, double threshold) {
         return compute(data, referenceValue, threshold, false);
     }
 
@@ -31,21 +34,23 @@ public class Cusum {
      * @param ignoreZeroValues if true, zero values are ignored in the computation.
      * @return Result containing positive and negative CUSUM values and the first anomaly index (-1 if no anomaly)
      */
-    public static Result compute(double[] data, double referenceValue, double threshold, boolean ignoreZeroValues) {
+    public Result compute(double[] data, double referenceValue, double threshold, boolean ignoreZeroValues) {
         ArrayList<Double> cusumValues = new ArrayList<>();
-        cusumValues.add(0.0);  // Initialize with 0
         int anomalyIndex = -1;
         
         for (int i = 0; i < data.length; i++) {
+            double lastCusum = cusumValues.isEmpty() 
+                ? 0.0 
+                : cusumValues.get(cusumValues.size() - 1);
+
             if (ignoreZeroValues && data[i] == 0) {
-                cusumValues.add(cusumValues.getLast());
+                cusumValues.add(lastCusum);
                 continue;
             }
 
-            double lastCusum = cusumValues.getLast();
-            double newCusum = SMOOTHING * (lastCusum + data[i] - referenceValue) + (1 - SMOOTHING) * lastCusum;
+            double newCusum = smoothing * (lastCusum + data[i] - referenceValue) + (1 - smoothing) * lastCusum;
 
-            // double newCusum = cusumValues.getLast() + (data[i] - referenceValue);
+            // double newCusum = lastCusum + (data[i] - referenceValue);
 
             cusumValues.add(newCusum);
             
@@ -54,8 +59,6 @@ public class Cusum {
                 anomalyIndex = i;
             }
         }
-
-        System.out.println("[END] reference: " + referenceValue + ", threshold: " + threshold);
         
         // Convert ArrayLists to arrays for return value
         return new Result(cusumValues.stream()

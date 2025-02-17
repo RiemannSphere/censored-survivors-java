@@ -248,7 +248,7 @@ public class SocialMediaPostsGeneratorTest {
         Table weeklyPosts = posts.summarize(
             ProjectConfig.POST_COUNT_COLUMN, 
             tech.tablesaw.aggregate.AggregateFunctions.sum
-        ).by(ProjectConfig.YEAR_COLUMN, ProjectConfig.WEEK_COLUMN); 
+        ).by(ProjectConfig.YEAR_COLUMN, ProjectConfig.WEEK_COLUMN);
         
         // Create two separate charts
         XYChart originalChart = new XYChartBuilder()
@@ -282,17 +282,10 @@ public class SocialMediaPostsGeneratorTest {
         // get 5 sigmas from the median
         double threshold = reference + 5 * PostsWithChurnTestSetupSingleton.STANDARD_DEVIATION_POST_COUNT;
         
-        Cusum.Result cusumResult = Cusum.compute(postCounts, reference, threshold, true);
-
-        // Get anomaly index directly from CUSUM result
+        Cusum cusum = new Cusum(0.16);
+        Cusum.Result cusumResult = cusum.compute(postCounts, reference, threshold, true);
         int anomalyIndex = cusumResult.anomalyIndex();
-
-        // Add CUSUM series to CUSUM chart
-        double[] cusumValues = Arrays.copyOfRange(
-            cusumResult.cusumValues(), 
-            1,
-            cusumResult.cusumValues().length
-        );
+        double[] cusumValues = cusumResult.cusumValues();
 
         // Add the data series to original chart
         originalChart.addSeries("Posts", weeks, postCounts)
