@@ -1,13 +1,24 @@
 package com.censoredsurvivors.data.statistics;
 
-import com.censoredsurvivors.util.ProjectConfig;
-
 import smile.wavelet.HaarWavelet;
 import smile.wavelet.Wavelet;
-import tech.tablesaw.api.Table;
 
 public class SocialMediaPostCountWavelets {
     private final Wavelet wavelet = new HaarWavelet();
+
+    /**
+     * Transforms the post counts using wavelet transform, then performs inverse transform.
+     * Mostly used for testing.
+     *
+     * @param postCounts Array of post count data
+     * @return Reconstructed post counts after inverse transform
+     */
+    public double[] identityTransform(double[] postCounts) {
+        double[] transformed = transform(postCounts);
+        wavelet.inverse(transformed);
+
+        return transformed;
+    }
 
     /**
      * Transforms the post counts using wavelet transform.
@@ -37,12 +48,12 @@ public class SocialMediaPostCountWavelets {
      * @return Reconstructed post counts after isolating the specified frequency level
      */
     public double[] reconstructByFrequency(double[] postCounts, int frequencyLevel) {
-        double[] postCountsToReconstruct = transform(postCounts);
+        double[] coefficients = transform(postCounts);
 
-        isolateFrequencyLevel(postCountsToReconstruct, frequencyLevel);
-        wavelet.inverse(postCountsToReconstruct);
+        double[] isolated = isolateFrequencyLevel(coefficients, frequencyLevel);
+        wavelet.inverse(isolated);
 
-        return postCountsToReconstruct;
+        return isolated;
     }
 
     /**
@@ -54,12 +65,12 @@ public class SocialMediaPostCountWavelets {
      * @return Reconstructed post counts after isolating the specified frequency levels
      */
     public double[] reconstructByFrequencies(double[] postCounts, int[] frequencyLevels) {
-        double[] postCountsToReconstruct = transform(postCounts);
+        double[] coefficients = transform(postCounts);
 
-        isolateFrequencyLevels(postCountsToReconstruct, frequencyLevels);
-        wavelet.inverse(postCountsToReconstruct);
+        double[] isolated = isolateFrequencyLevels(coefficients, frequencyLevels);
+        wavelet.inverse(isolated);
 
-        return postCountsToReconstruct;
+        return isolated;
     }
 
     /**
@@ -68,26 +79,29 @@ public class SocialMediaPostCountWavelets {
      *
      * @param coefficients The wavelet coefficients to modify
      * @param level Frequency level to isolate
+     * @return Array of coefficients with the specified level isolated
      * @throws IllegalArgumentException if any level is invalid
      */
-    private void isolateFrequencyLevel(double[] coefficients, int level) {
-        int n = coefficients.length;
-        int numLevels = (int) (Math.log(n) / Math.log(2));
-        
-        if (level < 0 || level >= numLevels) {
-            throw new IllegalArgumentException("Frequency level must be between 0 and " + (numLevels - 1) + " but was " + level);
+    public double[] isolateFrequencyLevel(double[] coeffs, int level) {
+        int n = coeffs.length;
+        int L = (int)(Math.log(n) / Math.log(2));
+        if ((1 << L) != n) {
+            throw new IllegalArgumentException("Coefficient array length must be a power of 2.");
         }
-
-        // Calculate the start and end indices for the desired level
-        int levelStart = n / (int) Math.pow(2, numLevels - level);
-        int levelEnd = n / (int) Math.pow(2, numLevels - level - 1);
-
-        // Zero out all coefficients except those in the desired level
-        for (int i = 0; i < n; i++) {
-            if (i < levelStart || i >= levelEnd) {
-                coefficients[i] = 0.0;
+        if (level < 0 || level > L) {
+            throw new IllegalArgumentException("Level must be between 0 and " + L + " but was " + level);
+        }
+        double[] isolated = new double[n];
+        if (level == 0) {
+            isolated[0] = coeffs[0];
+        } else {
+            int blockSize = 1 << (L - level);
+            int start = blockSize;
+            for (int i = 0; i < blockSize; i++) {
+                isolated[start + i] = coeffs[start + i];
             }
         }
+        return isolated;
     }
 
     /**
@@ -96,40 +110,29 @@ public class SocialMediaPostCountWavelets {
      *
      * @param coefficients The wavelet coefficients to modify
      * @param levels Array of frequency levels to preserve
+     * @return Array of coefficients with the specified levels isolated
      * @throws IllegalArgumentException if any level is invalid
      */
-    public void isolateFrequencyLevels(double[] coefficients, int[] levels) {
-        int n = coefficients.length;
-        int numLevels = (int) (Math.log(n) / Math.log(2));
-        
-        // Validate all levels first
+    public double[] isolateFrequencyLevels(double[] coeffs, int[] levels) {
+        int n = coeffs.length;
+        int L = (int) (Math.log(n) / Math.log(2));
+        if ((1 << L) != n) {
+            throw new IllegalArgumentException("Coefficient array length must be a power of 2.");
+        }
+        double[] isolated = new double[n];
         for (int level : levels) {
-            if (level < 0 || level >= numLevels) {
-                throw new IllegalArgumentException(
-                    "Frequency level must be between 0 and " + (numLevels - 1) + " but was " + level
-                );
+            if (level < 0 || level > L) {
+                throw new IllegalArgumentException("Level must be between 0 and " + L);
+            }
+            if (level == 0) {
+                isolated[0] = coeffs[0];
+            } else {
+                int blockSize = 1 << (L - level);
+                int start = blockSize;
+                System.arraycopy(coeffs, start, isolated, start, blockSize);
             }
         }
-
-        // Create a boolean array to mark which indices to keep
-        boolean[] keepIndex = new boolean[n];
-        
-        // Mark indices for each level that should be preserved
-        for (int level : levels) {
-            int levelStart = n / (int) Math.pow(2, numLevels - level);
-            int levelEnd = n / (int) Math.pow(2, numLevels - level - 1);
-            
-            for (int i = levelStart; i < levelEnd; i++) {
-                keepIndex[i] = true;
-            }
-        }
-        
-        // Zero out all coefficients except those in the desired levels
-        for (int i = 0; i < n; i++) {
-            if (!keepIndex[i]) {
-                coefficients[i] = 0.0;
-            }
-        }
+        return isolated;
     }
 
     private int nextPowerOfTwo(int n) {
