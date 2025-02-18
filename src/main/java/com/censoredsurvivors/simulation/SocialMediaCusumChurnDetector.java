@@ -15,6 +15,7 @@ import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
 import com.censoredsurvivors.data.model.SocialMediaPostRule;
 import com.censoredsurvivors.data.statistics.ConfusionStatus;
 import com.censoredsurvivors.data.statistics.Cusum;
+import com.censoredsurvivors.data.statistics.SocialMediaPostCountWavelets;
 import com.censoredsurvivors.util.ProjectConfig;
 
 import tech.tablesaw.aggregate.AggregateFunctions;
@@ -27,6 +28,8 @@ public class SocialMediaCusumChurnDetector {
 
     private final int OBSERVATION_PERIOD_IN_YEARS = 10;
     private final boolean ALL_CUSTOMERS_FULL_LIFETIME = true;
+
+    private final SocialMediaPostCountWavelets wavelets = new SocialMediaPostCountWavelets();
 
     private class ChannelRules {
         public static final SocialMediaPostRule FACEBOOK =  new SocialMediaPostRule(
@@ -67,7 +70,8 @@ public class SocialMediaCusumChurnDetector {
     public RunSummary run(
         int numberOfCustomers,
         double churnProbability,
-        double cusumSmoothing
+        double cusumSmoothing,
+        int[] waveletFrequencyLevels
     ) {
         Table customers = new SocialMediaCustomerGenerator(ALL_CUSTOMERS_FULL_LIFETIME)
             .generateUncensoredCustomers(
@@ -102,12 +106,13 @@ public class SocialMediaCusumChurnDetector {
 
             double[] postCounts = weeklyPosts.doubleColumn("Sum [" + ProjectConfig.POST_COUNT_COLUMN + "]")
                 .asDoubleArray();
+            double[] postCountsReconstructed = wavelets.reconstructByFrequencies(postCounts, waveletFrequencyLevels);
 
             double reference = 200;
             double threshold = reference + 3 * 20;
 
             Cusum cusum = new Cusum(cusumSmoothing);
-            Cusum.Result cusumResult = cusum.compute(postCounts, reference, threshold, true);
+            Cusum.Result cusumResult = cusum.compute(postCountsReconstructed, reference, threshold, true);
 
             int detectedChurnIndex = cusumResult.anomalyIndex();
             int detectedChurnYear;

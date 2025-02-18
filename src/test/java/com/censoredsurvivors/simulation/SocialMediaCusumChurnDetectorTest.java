@@ -22,17 +22,17 @@ import com.censoredsurvivors.util.SocialMediaGlobal;
 import de.vandermeer.asciitable.AsciiTable;
 import de.vandermeer.asciitable.CWC_LongestWord;
 import de.vandermeer.skb.interfaces.transformers.textformat.TextAlignment;
-
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 public class SocialMediaCusumChurnDetectorTest {
 
     @Test
     public void testChurnDetection() throws IOException {
-        int numberOfCustomers = 10_000;
+        int numberOfCustomers = 1_000;
         double churnProbability = 0.5;
         double cusumSmoothing = SocialMediaGlobal.CUSUM_SMOOTHING;
-
+        int[] waveletFrequencyLevels = { 1, 2, 3, 4, 5, 6, 7, 8 };
         SocialMediaCusumChurnDetector detector = new SocialMediaCusumChurnDetector();
-        RunSummary summary = detector.run(numberOfCustomers, churnProbability, cusumSmoothing);
+        RunSummary summary = detector.run(numberOfCustomers, churnProbability, cusumSmoothing, waveletFrequencyLevels);
         
         int total = summary.churnResults().length;
         String truePositive = String.format("%.2f", (double) 100 * summary.numberOfTruePositives() / total);
@@ -40,11 +40,20 @@ public class SocialMediaCusumChurnDetectorTest {
         String falseNegative = String.format("%.2f", (double) 100 * summary.numberOfFalseNegatives() / total);
         String trueNegative = String.format("%.2f", (double) 100 * summary.numberOfTrueNegatives() / total);
 
+        List<Integer> errors = Arrays.stream(summary.churnResults())
+            .filter(result -> result.confusionStatus() == ConfusionStatus.TRUE_POSITIVE)
+            .mapToInt(result -> result.detectionErrorInWeeks())
+            .boxed()
+            .collect(Collectors.toList());
+
+        double[] errorsArray = errors.stream().mapToDouble(Integer::doubleValue).toArray();
+        double medianError = new DescriptiveStatistics(errorsArray).getPercentile(50);
+
         AsciiTable at = new AsciiTable();
         at.setTextAlignment(TextAlignment.CENTER);
         at.getRenderer().setCWC(new CWC_LongestWord());
         at.addRule();
-        at.addRow("Smoothing: " + cusumSmoothing, "", "");
+        at.addRow("Smoothing: " + cusumSmoothing, "Wavelet Frequency Levels: " + Arrays.toString(waveletFrequencyLevels), "Median Detection Error: " + medianError);
         at.addRule();
         at.addRow("# Customers", "True Positive", "False Positive");
         at.addRow(numberOfCustomers, truePositive + "%", falsePositive + "%");
@@ -53,12 +62,6 @@ public class SocialMediaCusumChurnDetectorTest {
         at.addRow(churnProbability, falseNegative + "%", trueNegative + "%");
         at.addRule();
         System.out.println(at.render());
-
-        List<Integer> errors = Arrays.stream(summary.churnResults())
-            .filter(result -> result.confusionStatus() == ConfusionStatus.TRUE_POSITIVE)
-            .mapToInt(result -> result.detectionErrorInWeeks())
-            .boxed()
-            .collect(Collectors.toList());
 
         printHistogram(errors, "Detection Error Distribution", "Detection Error (weeks)");
     }
