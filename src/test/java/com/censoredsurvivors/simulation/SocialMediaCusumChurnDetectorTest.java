@@ -7,9 +7,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.knowm.xchart.BitmapEncoder;
 import org.knowm.xchart.CategoryChart;
 import org.knowm.xchart.CategoryChartBuilder;
@@ -25,17 +27,20 @@ import de.vandermeer.asciitable.AsciiTable;
 import de.vandermeer.asciitable.CWC_LongestWord;
 import de.vandermeer.skb.interfaces.transformers.textformat.TextAlignment;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+
 public class SocialMediaCusumChurnDetectorTest {
 
-    
-    @ParameterizedTest
-    @EnumSource(SignalCleaner.SignalCleaningType.class)
-    public void testChurnDetection(SignalCleaner.SignalCleaningType signalCleaningType) throws IOException {
+    @ParameterizedTest(name = "SignalCleaningType={0}, CusumSmoothing={1}, Threshold={2}")
+    @MethodSource("testParameters")
+    public void testChurnDetection(
+        SignalCleaner.SignalCleaningType signalCleaningType, 
+        double cusumSmoothing,
+        int threshold
+    ) throws IOException {
         int numberOfCustomers = 1_000;
         double churnProbability = 0.5;
-        double cusumSmoothing = SocialMediaGlobal.CUSUM_SMOOTHING;
         SocialMediaCusumChurnDetector detector = new SocialMediaCusumChurnDetector();
-        RunSummary summary = detector.run(numberOfCustomers, churnProbability, cusumSmoothing, signalCleaningType);
+        RunSummary summary = detector.run(numberOfCustomers, churnProbability, cusumSmoothing,1, signalCleaningType);
         
         int total = summary.churnResults().length;
         String truePositive = String.format("%.2f", (double) 100 * summary.numberOfTruePositives() / total);
@@ -53,21 +58,35 @@ public class SocialMediaCusumChurnDetectorTest {
         double[] errorsArray = errors.stream().mapToDouble(Integer::doubleValue).toArray();
         double medianError = new DescriptiveStatistics(errorsArray).getPercentile(50);
 
-        AsciiTable at = new AsciiTable();
-        at.setTextAlignment(TextAlignment.CENTER);
-        at.getRenderer().setCWC(new CWC_LongestWord());
-        at.addRule();
-        at.addRow("Smoothing: " + cusumSmoothing, "Median Absolute Error: " + medianError + " weeks", "Signal Cleaning: " + signalCleaningType);
-        at.addRule();
-        at.addRow("# Customers", "True Positive", "False Positive");
-        at.addRow(numberOfCustomers, truePositive + "%", falsePositive + "%");
-        at.addRule();
-        at.addRow("Churn Probability", "False Negative", "True Negative");
-        at.addRow(churnProbability, falseNegative + "%", trueNegative + "%");
-        at.addRule();
-        System.out.println(at.render());
+        if (medianError < 7) {
+            System.out.println(String.format("[%f, %s, %d] error: %f, false positive: %s", cusumSmoothing, signalCleaningType, threshold, medianError, falsePositive));
+        }
+        // AsciiTable at = new AsciiTable();
+        // at.setTextAlignment(TextAlignment.CENTER);
+        // at.getRenderer().setCWC(new CWC_LongestWord());
+        // at.addRule();
+        // at.addRow("Smoothing: " + cusumSmoothing, "Median Absolute Error: " + medianError + " weeks", "Signal Cleaning: " + signalCleaningType);
+        // at.addRule();
+        // at.addRow("# Customers", "True Positive", "False Positive");
+        // at.addRow(numberOfCustomers, truePositive + "%", falsePositive + "%");
+        // at.addRule();
+        // at.addRow("Churn Probability", "False Negative", "True Negative");
+        // at.addRow(churnProbability, falseNegative + "%", trueNegative + "%");
+        // at.addRule();
+        // System.out.println(at.render());
 
-        printHistogram(errors, "Detection Error Distribution", "Detection Error (weeks)");
+        //printHistogram(errors, "Detection Error Distribution", "Detection Error (weeks)");
+    }
+
+    private static Stream<Arguments> testParameters() {
+        return Arrays.stream(SignalCleaner.SignalCleaningType.values())
+                .flatMap(cleaningType -> 
+                    Stream.of(0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4)
+                        .flatMap(smoothing ->
+                            Stream.of(1, 2, 3, 4, 5)
+                                .map(threshold -> Arguments.of(cleaningType, smoothing, threshold))
+                        )
+                );
     }
 
     private void printHistogram(List<Integer> data, String title, String xAxisLabel) throws IOException {

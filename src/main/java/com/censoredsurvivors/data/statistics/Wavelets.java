@@ -52,7 +52,9 @@ public class Wavelets {
 
         WaveletShrinkage.denoise(paddedSignal, wavelet);
 
-        return paddedSignal;
+        double[] result = new double[signal.length];
+        System.arraycopy(paddedSignal, paddingLength, result, 0, signal.length);
+        return result;
     }
 
     /**

@@ -1,3 +1,83 @@
+## Project Description
+
+This is a customer churn prediction project. It has two pain parts:
+1. Customer Simulation - generate large amounts of customer activity data with programmed churn on specific days
+2. Churn Prediction - develop a churn prediction algorithm, use the simulated data for benchmarking
+
+The main customer profile is a social media manager posting large numbers of posts into various networks.
+There are some challenges:
+- left and right censorship
+- frequend inactive periods (0 posts posted)
+
+One of the churn indicators we are working with is a significant drop of activity.
+We are using CUSUM to find it in the timeseries. Various additional techniques are used for improving the performance:
+- interpolation of zero values
+- wavelet shrinkage denoising
+- simple moving average
+
+CUSUM itself was already giving good results with almost perfect detection of true positives and true negatives.
+The only trade-off was a long delay of detection - around 10 weeks after the churn date.
+
+So far we found out that the signal cleaning methods provide little value and the CUSUM itself with some additional smoothing (lambda) we can achieve smaller delays. 
+Usually, the detection error and the percentage of false positives are inversely proportional, this in the table below:
+
+[0,100000, NONE] error: 28,000000, false positive: 0,00
+[0,150000, NONE] error: 18,000000, false positive: 0,00
+[0,200000, NONE] error: 13,000000, false positive: 1,10
+[0,250000, NONE] error: 11,000000, false positive: 3,00
+[0,300000, NONE] error: 9,000000, false positive: 6,10
+[0,350000, NONE] error: 7,000000, false positive: 12,20
+[0,400000, NONE] error: 6,000000, false positive: 17,40
+
+In short, smoothing reduces false positives but unfortunately increases the detection error. 
+In general, we believe some false positives are ok and the small detection error is a priority.
+
+Some improvement was achieved with interpolating zeroes:
+
+[0,100000, INTERPOLATE_ZEROES] error: 22,000000, false positive: 0,00
+[0,150000, INTERPOLATE_ZEROES] error: 14,000000, false positive: 0,70
+[0,200000, INTERPOLATE_ZEROES] error: 10,000000, false positive: 3,50
+[0,250000, INTERPOLATE_ZEROES] error: 8,000000, false positive: 9,30
+[0,300000, INTERPOLATE_ZEROES] error: 6,000000, false positive: 12,50
+[0,350000, INTERPOLATE_ZEROES] error: 6,000000, false positive: 19,40
+[0,400000, INTERPOLATE_ZEROES] error: 5,000000, false positive: 26,70
+
+Wavelet denoising and moving average did not perform well, even with removing zeroes.
+Some performance increase might be achieved with different CUSUM thresholds:
+
+[0,350000, NONE, 5] error: 6,000000, false positive: 15,00
+[0,300000, INTERPOLATE_ZEROES, 1] error: 6,000000, false positive: 20,20
+[0,350000, INTERPOLATE_ZEROES, 4] error: 5,000000, false positive: 24,50
+[0,300000, WAVELET_DENOISING_AND_INTERPOLATE_ZEROES, 3] error: 6,000000, false positive: 21,60
+[0,350000, WAVELET_DENOISING_AND_INTERPOLATE_ZEROES, 1] error: 5,000000, false positive: 27,20
+
+## Improvement Ideas
+
+- Adaptive lambda
+- Adaptive reference
+- EWMA
+- Short-window rolling mean difference as an early warning
+- First-Order Difference (Delta Method) - difference between points to get quick detection of large changes
+- Two-stage detection, CUSUM and one of the following:
+    - Page-Hinkley test
+    - Bayesian Online Changepoint Detection
+    - Isolation Forest
+    - Local Outlier Factor
+    - DAS-CUSUM
+- Other methods:
+    - Expected Detection Delay
+    - Average Run Length
+    - Kullback-Leibler divergence
+    - Generalized Likelihood Ratio
+    - Autoencoder
+    - One-class SVM
+    - Kalman Filter
+    - Hidden Markov Model
+    - Gaussian Process
+    - Support Vector Machine
+    - Random Forest
+    - Gradient Boosting
+
 ## Tools
 
 1. For data transformations we use Tablesaw: https://jtablesaw.github.io/tablesaw/gettingstarted.html

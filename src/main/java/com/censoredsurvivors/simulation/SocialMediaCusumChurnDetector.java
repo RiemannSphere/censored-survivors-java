@@ -16,7 +16,6 @@ import com.censoredsurvivors.data.model.SocialMediaPostRule;
 import com.censoredsurvivors.data.statistics.ConfusionStatus;
 import com.censoredsurvivors.data.statistics.Cusum;
 import com.censoredsurvivors.data.statistics.SignalCleaner;
-import com.censoredsurvivors.data.statistics.Wavelets;
 import com.censoredsurvivors.util.ProjectConfig;
 
 import tech.tablesaw.aggregate.AggregateFunctions;
@@ -70,6 +69,7 @@ public class SocialMediaCusumChurnDetector {
         int numberOfCustomers,
         double churnProbability,
         double cusumSmoothing,
+        int threshold,
         SignalCleaner.SignalCleaningType signalCleaningType
     ) {
         Table customers = new SocialMediaCustomerGenerator(ALL_CUSTOMERS_FULL_LIFETIME)
@@ -107,10 +107,10 @@ public class SocialMediaCusumChurnDetector {
                 .asDoubleArray();
             double[] postCountsCleaned = SignalCleaner.clean(postCounts, signalCleaningType);
             double reference = 200;
-            double threshold = reference + 3 * 20;
+            double thresholdValue = reference + threshold * 20;
 
             Cusum cusum = new Cusum(cusumSmoothing);
-            Cusum.Result cusumResult = cusum.compute(postCountsCleaned, reference, threshold, true);
+            Cusum.Result cusumResult = cusum.compute(postCountsCleaned, reference, thresholdValue, true);
 
             int detectedChurnIndex = cusumResult.anomalyIndex();
             int detectedChurnYear;

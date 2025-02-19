@@ -21,20 +21,28 @@ public class MovingAverage {
             throw new IllegalArgumentException("Data length must be at least as long as the window size");
         }
 
-        int resultLength = data.length - window + 1;
-        double[] result = new double[resultLength];
-        double sum = 0;
+        double[] result = new double[data.length];
+        
+        // Handle the beginning (with smaller windows)
+        for (int i = 0; i < window - 1; i++) {
+            double sum = 0;
+            for (int j = 0; j <= i; j++) {
+                sum += data[j];
+            }
+            result[i] = sum / (i + 1);
+        }
 
-        // Sum up the first window
+        // Handle the middle (with full window)
+        double sum = 0;
         for (int i = 0; i < window; i++) {
             sum += data[i];
         }
-        result[0] = sum / window;
+        result[window - 1] = sum / window;
 
         // Slide the window over the rest of the data
         for (int i = window; i < data.length; i++) {
             sum += data[i] - data[i - window];
-            result[i - window + 1] = sum / window;
+            result[i] = sum / window;
         }
 
         return result;
