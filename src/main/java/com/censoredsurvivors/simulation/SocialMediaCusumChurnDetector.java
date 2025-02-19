@@ -11,11 +11,12 @@ import com.censoredsurvivors.data.generator.SocialMediaPostsGenerator;
 import com.censoredsurvivors.data.model.SocialMediaChannel;
 import com.censoredsurvivors.data.model.SocialMediaChurnReason;
 import com.censoredsurvivors.data.model.SocialMediaParam;
-import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
+import com.censoredsurvivors.data.model.CustomDistributionParams;
 import com.censoredsurvivors.data.model.SocialMediaPostRule;
 import com.censoredsurvivors.data.statistics.ConfusionStatus;
 import com.censoredsurvivors.data.statistics.Cusum;
-import com.censoredsurvivors.data.statistics.SocialMediaPostCountWavelets;
+import com.censoredsurvivors.data.statistics.SignalCleaner;
+import com.censoredsurvivors.data.statistics.Wavelets;
 import com.censoredsurvivors.util.ProjectConfig;
 
 import tech.tablesaw.aggregate.AggregateFunctions;
@@ -29,23 +30,21 @@ public class SocialMediaCusumChurnDetector {
     private final int OBSERVATION_PERIOD_IN_YEARS = 10;
     private final boolean ALL_CUSTOMERS_FULL_LIFETIME = true;
 
-    private final SocialMediaPostCountWavelets wavelets = new SocialMediaPostCountWavelets();
-
     private class ChannelRules {
         public static final SocialMediaPostRule FACEBOOK =  new SocialMediaPostRule(
             SocialMediaParam.CHANNEL, 
             SocialMediaChannel.FACEBOOK.getDisplayName(), 
-            new SocialMediaPostDistributionParams(200, 20, 0.8)
+            new CustomDistributionParams(200, 20, 0.8)
         );
         public static final SocialMediaPostRule TWITTER =  new SocialMediaPostRule(
             SocialMediaParam.CHANNEL, 
             SocialMediaChannel.TWITTER.getDisplayName(), 
-            new SocialMediaPostDistributionParams(100, 50, 0.8)
+            new CustomDistributionParams(100, 50, 0.8)
         );
         public static final SocialMediaPostRule INSTAGRAM =  new SocialMediaPostRule(
             SocialMediaParam.CHANNEL, 
             SocialMediaChannel.INSTAGRAM.getDisplayName(), 
-            new SocialMediaPostDistributionParams(10, 3, 0.8)
+            new CustomDistributionParams(10, 3, 0.8)
         );
     }
 
@@ -71,7 +70,7 @@ public class SocialMediaCusumChurnDetector {
         int numberOfCustomers,
         double churnProbability,
         double cusumSmoothing,
-        int[] waveletFrequencyLevels
+        SignalCleaner.SignalCleaningType signalCleaningType
     ) {
         Table customers = new SocialMediaCustomerGenerator(ALL_CUSTOMERS_FULL_LIFETIME)
             .generateUncensoredCustomers(
@@ -106,13 +105,12 @@ public class SocialMediaCusumChurnDetector {
 
             double[] postCounts = weeklyPosts.doubleColumn("Sum [" + ProjectConfig.POST_COUNT_COLUMN + "]")
                 .asDoubleArray();
-            double[] postCountsReconstructed = wavelets.reconstructByFrequencies(postCounts, waveletFrequencyLevels);
-
+            double[] postCountsCleaned = SignalCleaner.clean(postCounts, signalCleaningType);
             double reference = 200;
             double threshold = reference + 3 * 20;
 
             Cusum cusum = new Cusum(cusumSmoothing);
-            Cusum.Result cusumResult = cusum.compute(postCountsReconstructed, reference, threshold, true);
+            Cusum.Result cusumResult = cusum.compute(postCountsCleaned, reference, threshold, true);
 
             int detectedChurnIndex = cusumResult.anomalyIndex();
             int detectedChurnYear;

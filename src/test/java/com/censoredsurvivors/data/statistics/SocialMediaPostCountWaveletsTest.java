@@ -6,12 +6,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import tech.tablesaw.api.Table;
@@ -20,7 +18,7 @@ import com.censoredsurvivors.data.generator.SocialMediaCustomerGenerator;
 import com.censoredsurvivors.data.generator.SocialMediaPostsGenerator;
 import com.censoredsurvivors.data.model.SocialMediaChannel;
 import com.censoredsurvivors.data.model.SocialMediaParam;
-import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
+import com.censoredsurvivors.data.model.CustomDistributionParams;
 import com.censoredsurvivors.data.model.SocialMediaPostRule;
 import com.censoredsurvivors.util.ProjectConfig;
 
@@ -47,8 +45,8 @@ class WaveletTestSetupSingleton {
             Table customers = customerGenerator.generateUncensoredCustomers(NUMBER_OF_CUSTOMERS, NUMBER_OF_YEARS);
             SocialMediaPostsGenerator postsGenerator = new SocialMediaPostsGenerator(customers);
             List<SocialMediaPostRule> postRules = List.of(
-                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.FACEBOOK.getDisplayName(), new SocialMediaPostDistributionParams(200, 20, 0.5)),
-                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.INSTAGRAM.getDisplayName(), new SocialMediaPostDistributionParams(100, 50, 0.5))
+                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.FACEBOOK.getDisplayName(), new CustomDistributionParams(200, 20, 0.5)),
+                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.INSTAGRAM.getDisplayName(), new CustomDistributionParams(100, 50, 0.5))
             );
             List<SocialMediaChannel> channels = List.of(SocialMediaChannel.FACEBOOK, SocialMediaChannel.INSTAGRAM);
     
@@ -78,7 +76,7 @@ class WaveletWithChurnTestSetupSingleton {
             SocialMediaPostsGenerator postsGenerator = new SocialMediaPostsGenerator(customers);
             // only generate posts for one channel to make churn more visible
             List<SocialMediaPostRule> postRules = List.of(
-                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.FACEBOOK.getDisplayName(), new SocialMediaPostDistributionParams(200, 50, 0.5))
+                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.FACEBOOK.getDisplayName(), new CustomDistributionParams(200, 50, 0.5))
             );
             List<SocialMediaChannel> channels = List.of(SocialMediaChannel.FACEBOOK);
             posts = postsGenerator.generatePosts("Platform Posts", postRules, channels);
@@ -111,7 +109,7 @@ public class SocialMediaPostCountWaveletsTest {
         double[] postCounts = weeklyPosts.doubleColumn("Sum [" + ProjectConfig.POST_COUNT_COLUMN + "]")
             .asDoubleArray();
 
-        SocialMediaPostCountWavelets wavelets = new SocialMediaPostCountWavelets();
+        Wavelets wavelets = new Wavelets();
         double[] coefficients = wavelets.transform(postCounts);
 
         // Calculate the next power of 2 after posts.rowCount()
@@ -156,7 +154,7 @@ public class SocialMediaPostCountWaveletsTest {
         double[] postCounts = weeklyPosts.doubleColumn(summaryColumnName)
             .asDoubleArray();
 
-        SocialMediaPostCountWavelets wavelets = new SocialMediaPostCountWavelets();
+        Wavelets wavelets = new Wavelets();
         double[] levelReconstruction = wavelets.reconstructByFrequency(postCounts, frequencyLevel);
         double[] truncatedReconstruction = Arrays.copyOfRange(
             levelReconstruction, 
@@ -294,134 +292,6 @@ public class SocialMediaPostCountWaveletsTest {
         );
     }
 
-    private record FrequencyBandTestCase(
-        String name,
-        int[] levels,
-        String description
-    ) {}
-
-    private static Stream<FrequencyBandTestCase> frequencyBandTestCases() {
-        return Stream.of(
-            new FrequencyBandTestCase(
-                "low_pass",
-                new int[]{0, 1, 2},
-                "Low frequency components (trend)"
-            ),
-            new FrequencyBandTestCase(
-                "high_pass",
-                new int[]{6, 7, 8},
-                "High frequency components (noise)"
-            ),
-            new FrequencyBandTestCase(
-                "mid_pass",
-                new int[]{3, 4, 5},
-                "Mid frequency components (seasonality)"
-            ),
-            new FrequencyBandTestCase(
-                "all_pass",
-                new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8},
-                "All frequency components"
-            )
-        );
-    }
-
-    @ParameterizedTest
-    @MethodSource("frequencyBandTestCases")
-    public void testReconstructByFrequencies(FrequencyBandTestCase testCase) throws IOException {
-        Table posts = WaveletTestSetupSingleton.getPosts();
-
-        // Prepare weekly aggregated data
-        Table weeklyPosts = posts.summarize(
-            ProjectConfig.POST_COUNT_COLUMN, 
-            tech.tablesaw.aggregate.AggregateFunctions.sum
-        ).by(ProjectConfig.YEAR_COLUMN, ProjectConfig.WEEK_COLUMN);
-
-        String summaryColumnName = "Sum [" + ProjectConfig.POST_COUNT_COLUMN + "]";
-        double[] postCounts = weeklyPosts.doubleColumn(summaryColumnName)
-            .asDoubleArray();
-
-        double[] weeks = IntStream.range(0, postCounts.length)
-            .mapToDouble(i -> i)
-            .toArray();
-
-        // Transform and reconstruct
-        SocialMediaPostCountWavelets wavelets = new SocialMediaPostCountWavelets();
-        double[] reconstructed = wavelets.reconstructByFrequencies(postCounts, testCase.levels);
-
-        // remove padding on front 
-        double[] reconstructedWithoutPadding = 
-            Arrays.copyOfRange(reconstructed, reconstructed.length - postCounts.length, reconstructed.length);
-
-        IntStream
-            .range(0, Math.min(reconstructedWithoutPadding.length, postCounts.length))
-            .mapToObj(i -> testCase.name + ":" + reconstructedWithoutPadding[i] + ":" + postCounts[i])
-            .forEach(System.out::println);
-
-        Assertions.assertEquals(reconstructedWithoutPadding.length, postCounts.length, "Reconstructed and post counts should have the same length");
-
-        // Create chart
-        XYChart chart = new XYChartBuilder()
-            .width(800)
-            .height(400)
-            .title(String.format("Frequency Band Reconstruction (%s)", testCase.description))
-            .xAxisTitle("Week")
-            .yAxisTitle("Number of Posts")
-            .build();
-
-        // Add original data series
-        chart.addSeries(
-            "Original Posts",
-            weeks,
-            postCounts
-        )
-            .setXYSeriesRenderStyle(XYSeriesRenderStyle.Line)
-            .setLineColor(Color.BLUE);
-
-        // Add reconstructed data series
-        chart.addSeries(
-            String.format("Reconstructed (levels %s)", Arrays.toString(testCase.levels)),
-            weeks,
-            reconstructedWithoutPadding
-        )
-            .setXYSeriesRenderStyle(XYSeriesRenderStyle.Line)
-            .setLineColor(Color.RED);
-
-        // Style chart
-        chart.getStyler().setLegendPosition(LegendPosition.InsideNE);
-        chart.getStyler().setMarkerSize(0);
-        chart.getStyler().setPlotGridLinesVisible(false);
-        chart.getStyler().setPlotGridVerticalLinesVisible(false);
-
-        // Save chart
-        new java.io.File("target/test-output/wavelets/frequency_bands").mkdirs();
-        BitmapEncoder.saveBitmap(
-            chart,
-            String.format("target/test-output/wavelets/frequency_bands/%s.png", testCase.name),
-            BitmapEncoder.BitmapFormat.PNG
-        );
-
-        // Verify reconstruction properties
-        Assertions.assertEquals(postCounts.length, reconstructed.length - (reconstructed.length - postCounts.length));
-        
-        // For low pass, verify that high frequency components are removed (signal is smoother)
-        if (testCase.name.equals("low_pass")) {
-            double originalVariance = calculateVariance(postCounts);
-            double reconstructedVariance = calculateVariance(
-                Arrays.copyOfRange(reconstructed, reconstructed.length - postCounts.length, reconstructed.length)
-            );
-            Assertions.assertTrue(reconstructedVariance < originalVariance, 
-                "Low pass reconstruction should have lower variance than original signal");
-        }
-    }
-
-    private double calculateVariance(double[] data) {
-        double mean = Arrays.stream(data).average().orElse(0.0);
-        return Arrays.stream(data)
-            .map(x -> Math.pow(x - mean, 2))
-            .average()
-            .orElse(0.0);
-    }
-
     @Test
     public void testIdentityTransform() throws IOException {
         Table posts = WaveletTestSetupSingleton.getPosts();
@@ -441,19 +311,12 @@ public class SocialMediaPostCountWaveletsTest {
             .toArray();
 
         // Transform and reconstruct
-        SocialMediaPostCountWavelets wavelets = new SocialMediaPostCountWavelets();
+        Wavelets wavelets = new Wavelets();
         double[] reconstructed = wavelets.identityTransform(postCounts);
 
         // remove padding on front 
         double[] reconstructedWithoutPadding = 
             Arrays.copyOfRange(reconstructed, reconstructed.length - postCounts.length, reconstructed.length);
-
-        // Print values for debugging
-        IntStream
-            .range(0, Math.min(reconstructedWithoutPadding.length, postCounts.length))
-            .mapToObj(i -> String.format("Week %d: Original=%.2f, Reconstructed=%.2f", 
-                i, postCounts[i], reconstructedWithoutPadding[i]))
-            .forEach(System.out::println);
 
         // Create chart
         XYChart chart = new XYChartBuilder()
@@ -506,5 +369,92 @@ public class SocialMediaPostCountWaveletsTest {
             Assertions.assertEquals(postCounts[i], reconstructedWithoutPadding[i], maxError,
                 String.format("Reconstruction error at week %d exceeds tolerance", i));
         }
+    }
+
+    @Test
+    public void testDenoise() throws IOException {
+        Table posts = WaveletTestSetupSingleton.getPosts();
+
+        // Prepare weekly aggregated data
+        Table weeklyPosts = posts.summarize(
+            ProjectConfig.POST_COUNT_COLUMN, 
+            tech.tablesaw.aggregate.AggregateFunctions.sum
+        ).by(ProjectConfig.YEAR_COLUMN, ProjectConfig.WEEK_COLUMN);
+
+        String summaryColumnName = "Sum [" + ProjectConfig.POST_COUNT_COLUMN + "]";
+        double[] postCounts = weeklyPosts.doubleColumn(summaryColumnName)
+            .asDoubleArray();
+
+        double[] weeks = IntStream.range(0, postCounts.length)
+            .mapToDouble(i -> i)
+            .toArray();
+
+        // Denoise the signal
+        Wavelets wavelets = new Wavelets();
+        double[] denoised = wavelets.denoise(postCounts);
+
+        // remove padding on front 
+        double[] denoisedWithoutPadding = 
+            Arrays.copyOfRange(denoised, denoised.length - postCounts.length, denoised.length);
+
+        // System.out.println("\n\npostCounts (length " + postCounts.length + "):" + Arrays.toString(postCounts));
+        // System.out.println("\ndenoised (length " + denoised.length + "):" + Arrays.toString(denoised));
+        // System.out.println("\ndenoisedWithoutPadding (length " + denoisedWithoutPadding.length + "):" + Arrays.toString(denoisedWithoutPadding));
+
+        // Create chart
+        XYChart chart = new XYChartBuilder()
+            .width(800)
+            .height(400)
+            .title("Wavelet Denoising")
+            .xAxisTitle("Week")
+            .yAxisTitle("Number of Posts")
+            .build();
+
+        // Add original data series
+        chart.addSeries(
+            "Original Posts",
+            weeks,
+            postCounts
+        )
+            .setXYSeriesRenderStyle(XYSeriesRenderStyle.Line)
+            .setLineColor(Color.BLUE);
+
+        // Add denoised data series
+        chart.addSeries(
+            "Denoised",
+            weeks,
+            denoisedWithoutPadding
+        )
+            .setXYSeriesRenderStyle(XYSeriesRenderStyle.Line)
+            .setLineColor(Color.RED);
+
+        // Style chart
+        chart.getStyler().setLegendPosition(LegendPosition.InsideNE);
+        chart.getStyler().setMarkerSize(0);
+        chart.getStyler().setPlotGridLinesVisible(true);
+        chart.getStyler().setPlotGridVerticalLinesVisible(false);
+
+        // Save chart
+        new java.io.File("target/test-output/wavelets/denoising").mkdirs();
+        BitmapEncoder.saveBitmap(
+            chart,
+            "target/test-output/wavelets/denoising/reconstruction.png",
+            BitmapEncoder.BitmapFormat.PNG
+        );
+
+        // Verify denoising properties
+        Assertions.assertEquals(postCounts.length, denoisedWithoutPadding.length, 
+            "Original and denoised signals should have the same length");
+        
+        // Check if denoising preserves the general shape (mean difference should be small)
+        double meanOriginal = Arrays.stream(postCounts).average().orElse(0);
+        double meanDenoised = Arrays.stream(denoisedWithoutPadding).average().orElse(0);
+        double maxMeanDifference = meanOriginal * 0.1; // Allow 10% difference in means
+        
+        Assertions.assertTrue(
+            Math.abs(meanOriginal - meanDenoised) < maxMeanDifference,
+            String.format("Mean difference (%.2f) exceeds tolerance (%.2f)", 
+                Math.abs(meanOriginal - meanDenoised), maxMeanDifference)
+        );
     }
 }

@@ -8,7 +8,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.knowm.xchart.BitmapEncoder;
 import org.knowm.xchart.CategoryChart;
 import org.knowm.xchart.CategoryChartBuilder;
@@ -16,6 +17,7 @@ import org.knowm.xchart.Histogram;
 import org.knowm.xchart.style.Styler.LegendPosition;
 
 import com.censoredsurvivors.data.statistics.ConfusionStatus;
+import com.censoredsurvivors.data.statistics.SignalCleaner;
 import com.censoredsurvivors.simulation.SocialMediaCusumChurnDetector.RunSummary;
 import com.censoredsurvivors.util.SocialMediaGlobal;
 
@@ -25,14 +27,15 @@ import de.vandermeer.skb.interfaces.transformers.textformat.TextAlignment;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 public class SocialMediaCusumChurnDetectorTest {
 
-    @Test
-    public void testChurnDetection() throws IOException {
+    
+    @ParameterizedTest
+    @EnumSource(SignalCleaner.SignalCleaningType.class)
+    public void testChurnDetection(SignalCleaner.SignalCleaningType signalCleaningType) throws IOException {
         int numberOfCustomers = 1_000;
         double churnProbability = 0.5;
         double cusumSmoothing = SocialMediaGlobal.CUSUM_SMOOTHING;
-        int[] waveletFrequencyLevels = { 1, 2, 3, 4, 5, 6, 7, 8 };
         SocialMediaCusumChurnDetector detector = new SocialMediaCusumChurnDetector();
-        RunSummary summary = detector.run(numberOfCustomers, churnProbability, cusumSmoothing, waveletFrequencyLevels);
+        RunSummary summary = detector.run(numberOfCustomers, churnProbability, cusumSmoothing, signalCleaningType);
         
         int total = summary.churnResults().length;
         String truePositive = String.format("%.2f", (double) 100 * summary.numberOfTruePositives() / total);
@@ -43,6 +46,7 @@ public class SocialMediaCusumChurnDetectorTest {
         List<Integer> errors = Arrays.stream(summary.churnResults())
             .filter(result -> result.confusionStatus() == ConfusionStatus.TRUE_POSITIVE)
             .mapToInt(result -> result.detectionErrorInWeeks())
+            .map(error -> Math.abs(error))
             .boxed()
             .collect(Collectors.toList());
 
@@ -53,7 +57,7 @@ public class SocialMediaCusumChurnDetectorTest {
         at.setTextAlignment(TextAlignment.CENTER);
         at.getRenderer().setCWC(new CWC_LongestWord());
         at.addRule();
-        at.addRow("Smoothing: " + cusumSmoothing, "Wavelet Frequency Levels: " + Arrays.toString(waveletFrequencyLevels), "Median Detection Error: " + medianError);
+        at.addRow("Smoothing: " + cusumSmoothing, "Median Absolute Error: " + medianError + " weeks", "Signal Cleaning: " + signalCleaningType);
         at.addRule();
         at.addRow("# Customers", "True Positive", "False Positive");
         at.addRow(numberOfCustomers, truePositive + "%", falsePositive + "%");

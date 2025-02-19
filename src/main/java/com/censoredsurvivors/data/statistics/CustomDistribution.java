@@ -5,10 +5,10 @@ import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.random.RandomGeneratorFactory;
 
-import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
+import com.censoredsurvivors.data.model.CustomDistributionParams;
 import com.censoredsurvivors.util.ProjectConfig;
 
-public class SocialMediaPostCountDistribution {
+public class CustomDistribution {
     private BinomialDistribution bernoulliDistribution;
     private NormalDistribution normalDistribution;
     
@@ -17,16 +17,16 @@ public class SocialMediaPostCountDistribution {
     private double frequency;
 
     /**
-     * Generates a distribution for the number of posts for a given week.
+     * Generates a distribution for the number of data points.
      * Uses two distributions: 
-     * - Normal distribution to generate the number of posts for a given week,
-     * - Bernoulli distribution to choose whether to post or not for a given week.
+     * - Normal distribution to generate the number of data points,
+     * - Bernoulli distribution to choose whether to generate a data point or not.
      * 
-     * @param mean Mean number of posts per week.
-     * @param stdDev Standard deviation of the number of posts per week.
-     * @param frequency Frequency of posting = 1 / number of weeks between posts.
+     * @param mean Mean number of data points.
+     * @param stdDev Standard deviation of the number of data points.
+     * @param frequency Frequency of generating a data point.
      */ 
-    public SocialMediaPostCountDistribution(SocialMediaPostDistributionParams params) {
+    public CustomDistribution(CustomDistributionParams params) {
         this.mean = params.mean();
         this.stdDev = params.stdDev();
         this.frequency = params.frequency();

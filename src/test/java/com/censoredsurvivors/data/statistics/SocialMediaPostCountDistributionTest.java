@@ -7,7 +7,7 @@ import org.knowm.xchart.CategoryChartBuilder;
 import org.knowm.xchart.Histogram;
 import org.knowm.xchart.style.Styler.LegendPosition;
 
-import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
+import com.censoredsurvivors.data.model.CustomDistributionParams;
 
 import java.awt.Color;
 import java.io.File;
@@ -32,38 +32,38 @@ public class SocialMediaPostCountDistributionTest {
         // 1. Compare different frequencies
         compareDistributions(
             "Frequency Comparison",
-            new SocialMediaPostDistributionParams(100, 10, 0.25),
-            new SocialMediaPostDistributionParams(100, 10, 1.0),
+            new CustomDistributionParams(100, 10, 0.25),
+            new CustomDistributionParams(100, 10, 1.0),
             "frequency-comparison"
         );
 
         // 2. Compare different standard deviations
         compareDistributions(
             "Standard Deviation Comparison",
-            new SocialMediaPostDistributionParams(100, 10, 1.0),
-            new SocialMediaPostDistributionParams(100, 25, 1.0),
+            new CustomDistributionParams(100, 10, 1.0),
+            new CustomDistributionParams(100, 25, 1.0),
             "stddev-comparison"
         );
 
         // 3. Compare different means
         compareDistributions(
             "Mean Comparison",
-            new SocialMediaPostDistributionParams(150, 10, 1.0),
-            new SocialMediaPostDistributionParams(100, 10, 1.0),
+            new CustomDistributionParams(150, 10, 1.0),
+            new CustomDistributionParams(100, 10, 1.0),
             "mean-comparison"
         );
     }
 
     private void compareDistributions(
         String title,
-        SocialMediaPostDistributionParams params1,
-        SocialMediaPostDistributionParams params2,
+        CustomDistributionParams params1,
+        CustomDistributionParams params2,
         String outputFileName
     ) throws IOException {
         
         // Create distributions
-        SocialMediaPostCountDistribution dist1 = new SocialMediaPostCountDistribution(params1);
-        SocialMediaPostCountDistribution dist2 = new SocialMediaPostCountDistribution(params2);
+        CustomDistribution dist1 = new CustomDistribution(params1);
+        CustomDistribution dist2 = new CustomDistribution(params2);
 
         // Generate data
         List<Double> data1 = java.util.stream.Stream.generate(dist1::sample)

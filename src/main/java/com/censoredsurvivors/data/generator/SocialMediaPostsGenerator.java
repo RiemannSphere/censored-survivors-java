@@ -14,9 +14,9 @@ import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.random.RandomGeneratorFactory;
 
 import com.censoredsurvivors.data.model.SocialMediaParam;
-import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
+import com.censoredsurvivors.data.model.CustomDistributionParams;
 import com.censoredsurvivors.data.model.SocialMediaPostRule;
-import com.censoredsurvivors.data.statistics.SocialMediaPostCountDistribution;
+import com.censoredsurvivors.data.statistics.CustomDistribution;
 import com.censoredsurvivors.util.ProjectConfig;
 import com.censoredsurvivors.data.model.SocialMediaChannel;
 import com.censoredsurvivors.data.model.SocialMediaChurnReason;
@@ -94,7 +94,7 @@ public class SocialMediaPostsGenerator {
             return startDate.datesUntil(endDate)
                 .filter(date -> date.getDayOfWeek() == DayOfWeek.MONDAY) // samples are weeks
                 .flatMap(date -> channels.stream().map(channel -> {
-                    SocialMediaPostCountDistribution firstMatchingDistribution = postRules.stream()
+                    CustomDistribution firstMatchingDistribution = postRules.stream()
                         .filter(rule -> {
                             boolean matchesChannel = rule.param() == SocialMediaParam.CHANNEL && rule.paramValue().equals(channel.getDisplayName());
                             boolean matchesIndustry = rule.param() == SocialMediaParam.INDUSTRY && rule.paramValue().equals(industry);
@@ -109,11 +109,11 @@ public class SocialMediaPostsGenerator {
                                 churnDate == null || 
                                 date.isBefore(churnDate)
                             ) {
-                                return new SocialMediaPostCountDistribution(rule.postCountDistributionParams());
+                                return new CustomDistribution(rule.postCountDistributionParams());
                             }
 
-                            return new SocialMediaPostCountDistribution(
-                                new SocialMediaPostDistributionParams(
+                            return new CustomDistribution(
+                                new CustomDistributionParams(
                                     rule.postCountDistributionParams().mean() * (1 - churnFactor),
                                     rule.postCountDistributionParams().stdDev() * (1 - churnFactor),
                                     rule.postCountDistributionParams().frequency()
@@ -126,8 +126,8 @@ public class SocialMediaPostsGenerator {
                             double randomStdDev = Math.max(1, randomMean * ProjectConfig.RANDOM.nextDouble());
                             double randomFrequency = Math.max(0.5, ProjectConfig.RANDOM.nextDouble()); // minimum frequency is 0.5
     
-                            return new SocialMediaPostCountDistribution(
-                                new SocialMediaPostDistributionParams(randomMean, randomStdDev, randomFrequency));
+                            return new CustomDistribution(
+                                new CustomDistributionParams(randomMean, randomStdDev, randomFrequency));
                         });
 
                     return new Post(

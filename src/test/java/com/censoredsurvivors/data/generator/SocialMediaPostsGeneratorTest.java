@@ -23,13 +23,12 @@ import java.util.stream.IntStream;
 import java.awt.BasicStroke;
 import java.time.temporal.WeekFields;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 
 import com.censoredsurvivors.util.ProjectConfig;
 import com.censoredsurvivors.data.model.SocialMediaPostRule;
 import com.censoredsurvivors.data.model.SocialMediaChannel;
 import com.censoredsurvivors.data.model.SocialMediaParam;
-import com.censoredsurvivors.data.model.SocialMediaPostDistributionParams;
+import com.censoredsurvivors.data.model.CustomDistributionParams;
 import com.censoredsurvivors.data.statistics.Cusum;
 
 class PostsTestSetupSingleton {
@@ -56,10 +55,10 @@ class PostsTestSetupSingleton {
         if (posts == null) {
             SocialMediaPostsGenerator postsGenerator = new SocialMediaPostsGenerator(customers);
             List<SocialMediaPostRule> postRules = List.of(
-                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.FACEBOOK.getDisplayName(), new SocialMediaPostDistributionParams(200, 20, 0.5)),
-                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.INSTAGRAM.getDisplayName(), new SocialMediaPostDistributionParams(100, 50, 0.5)),
-                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.TWITTER.getDisplayName(), new SocialMediaPostDistributionParams(10, 1, 0.8)),
-                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.LINKEDIN.getDisplayName(), new SocialMediaPostDistributionParams(5, 2, 0.25))
+                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.FACEBOOK.getDisplayName(), new CustomDistributionParams(200, 20, 0.5)),
+                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.INSTAGRAM.getDisplayName(), new CustomDistributionParams(100, 50, 0.5)),
+                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.TWITTER.getDisplayName(), new CustomDistributionParams(10, 1, 0.8)),
+                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.LINKEDIN.getDisplayName(), new CustomDistributionParams(5, 2, 0.25))
             );
             // define all channels so there will be no random channel selection
             List<SocialMediaChannel> channels = List.of(
@@ -98,7 +97,7 @@ class PostsWithChurnTestSetupSingleton {
             SocialMediaPostsGenerator postsGenerator = new SocialMediaPostsGenerator(customers);
             // only generate posts for one channel to make churn more visible
             List<SocialMediaPostRule> postRules = List.of(
-                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.FACEBOOK.getDisplayName(), new SocialMediaPostDistributionParams(MEAN_POST_COUNT, STANDARD_DEVIATION_POST_COUNT, FREQUENCY_POST_COUNT))
+                new SocialMediaPostRule(SocialMediaParam.CHANNEL, SocialMediaChannel.FACEBOOK.getDisplayName(), new CustomDistributionParams(MEAN_POST_COUNT, STANDARD_DEVIATION_POST_COUNT, FREQUENCY_POST_COUNT))
             );
             List<SocialMediaChannel> channels = List.of(SocialMediaChannel.FACEBOOK);
             posts = postsGenerator.generatePosts("Platform Posts", postRules, channels);

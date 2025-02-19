@@ -2,53 +2,69 @@ package com.censoredsurvivors.data.statistics;
 
 import smile.wavelet.HaarWavelet;
 import smile.wavelet.Wavelet;
+import smile.wavelet.WaveletShrinkage;
 
-public class SocialMediaPostCountWavelets {
+public class Wavelets {
     private final Wavelet wavelet = new HaarWavelet();
 
     /**
-     * Transforms the post counts using wavelet transform, then performs inverse transform.
+     * Transforms the signal using wavelet transform, then performs inverse transform.
      * Mostly used for testing.
      *
-     * @param postCounts Array of post count data
-     * @return Reconstructed post counts after inverse transform
+     * @param signal Array of signal data
+     * @return Reconstructed signal after inverse transform
      */
-    public double[] identityTransform(double[] postCounts) {
-        double[] transformed = transform(postCounts);
+    public double[] identityTransform(double[] signal) {
+        double[] transformed = transform(signal);
         wavelet.inverse(transformed);
 
         return transformed;
     }
 
     /**
-     * Transforms the post counts using wavelet transform.
+     * Transforms the signal using wavelet transform.
      *
-     * @param postCounts Array of post count data
+     * @param signal Array of signal data
      * @return coefficients of the wavelet transform
      */
-    public double[] transform(double[] postCounts) {
-        int targetLength = nextPowerOfTwo(postCounts.length);
-        
-        // Create padded array
-        double[] paddedPostCounts = new double[targetLength];
-        // Copy original values to the end of the new array, leaving zeros at the beginning
-        System.arraycopy(postCounts, 0, paddedPostCounts, targetLength - postCounts.length, postCounts.length);
+    public double[] transform(double[] signal) {
+        int targetLength = nextPowerOfTwo(signal.length);
+        double[] paddedSignal = new double[targetLength];
+        int paddingLength = targetLength - signal.length;
+        System.arraycopy(signal, 0, paddedSignal, paddingLength, signal.length);
 
-        wavelet.transform(paddedPostCounts);
+        wavelet.transform(paddedSignal);
 
-        return paddedPostCounts;
+        return paddedSignal;
     }
 
     /**
-     * Transforms the post counts using wavelet transform, isolates a specific frequency level,
+     * Denoises the signal using wavelet transform.
+     *
+     * @param signal Array of signal data
+     * @return Denoised signal
+     */
+    public double[] denoise(double[] signal) {
+        int targetLength = nextPowerOfTwo(signal.length);
+        double[] paddedSignal = new double[targetLength];
+        int paddingLength = targetLength - signal.length;
+        System.arraycopy(signal, 0, paddedSignal, paddingLength, signal.length);
+
+        WaveletShrinkage.denoise(paddedSignal, wavelet);
+
+        return paddedSignal;
+    }
+
+    /**
+     * Transforms the signal using wavelet transform, isolates a specific frequency level,
      * and performs inverse transform.
      *
-     * @param postCounts Array of post count data
+     * @param signal Array of signal data
      * @param frequencyLevel Frequency level to isolate
-     * @return Reconstructed post counts after isolating the specified frequency level
+     * @return Reconstructed signal after isolating the specified frequency level
      */
-    public double[] reconstructByFrequency(double[] postCounts, int frequencyLevel) {
-        double[] coefficients = transform(postCounts);
+    public double[] reconstructByFrequency(double[] signal, int frequencyLevel) {
+        double[] coefficients = transform(signal);
 
         double[] isolated = isolateFrequencyLevel(coefficients, frequencyLevel);
         wavelet.inverse(isolated);
@@ -57,15 +73,15 @@ public class SocialMediaPostCountWavelets {
     }
 
     /**
-     * Transforms the post counts using wavelet transform, isolates specified frequency levels,
+     * Transforms the signal using wavelet transform, isolates specified frequency levels,
      * and performs inverse transform.
      *
-     * @param postCounts Array of post count data
+     * @param signal Array of signal data
      * @param frequencyLevels Array of frequency levels to isolate
-     * @return Reconstructed post counts after isolating the specified frequency levels
+     * @return Reconstructed signal after isolating the specified frequency levels
      */
-    public double[] reconstructByFrequencies(double[] postCounts, int[] frequencyLevels) {
-        double[] coefficients = transform(postCounts);
+    public double[] reconstructByFrequencies(double[] signal, int[] frequencyLevels) {
+        double[] coefficients = transform(signal);
 
         double[] isolated = isolateFrequencyLevels(coefficients, frequencyLevels);
         wavelet.inverse(isolated);
